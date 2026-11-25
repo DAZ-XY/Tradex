@@ -27,7 +27,7 @@ window.TRADEX_CONFIG = {
   media: {
     hero: {
       enabled: true,
-      mp4: 'assets/video/hero-montage.mp4',
+      mp4: 'assets/video/hero-montage-r19.mp4',
     },
     compound: '',
   },

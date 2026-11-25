@@ -295,7 +295,7 @@ h3 { font-family:var(--heading); font-size:var(--type-feature); font-weight:600;
   inset:0;
   z-index:-1;
   overflow:hidden;
-  background:#071426 url("assets/images/hero/hero-video-poster.webp") 57% 50% / cover no-repeat;
+  background:#071426 url("assets/images/hero/hero-video-poster-r19.webp") 57% 50% / cover no-repeat;
   transform:translate3d(0,var(--media-y,0%),0);
   clip-path:inset(0 0 var(--media-clip,0%) 0);
 }

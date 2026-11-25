@@ -1,4 +1,4 @@
-TRADEX. Website V02 | Revision 18
+TRADEX. Website V02 | Revision 19
 
 Upload this ZIP to Netlify or open the extracted index.html in a browser.
 The website is static and needs no build command or backend. Publish from
