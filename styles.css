@@ -23,6 +23,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Switzer";
+  src: url("assets/fonts/Switzer-VariableItalic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --canvas: #010101;
@@ -189,34 +197,6 @@ h3 { font-family:var(--heading); font-size:var(--type-feature); font-weight:600;
   font-weight: 500;
 }
 .text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
-
-.intro { position: fixed; z-index: 20; inset: 0; overflow: hidden; pointer-events: none; }
-.gate {
-  position: absolute;
-  inset: -2px;
-  background: radial-gradient(ellipse at center, #08182a 0%, #030912 48%);
-  will-change: transform;
-  --split: min(28vh, 35vw);
-}
-.gate-left { clip-path: polygon(0 0, calc(50% + var(--split) + 3px) 0, calc(50% - var(--split) + 3px) 100%, 0 100%); }
-.gate-right { clip-path: polygon(calc(50% + var(--split) - 3px) 0, 100% 0, 100% 100%, calc(50% - var(--split) - 3px) 100%); }
-.gate img {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: clamp(130px, 17vw, 222px);
-  height: auto;
-  transform: translate(-50%, -50%);
-  animation: symbol-in 240ms ease-out both;
-}
-.intro.is-opening .gate-left { animation: gate-left var(--gate-duration, 880ms) var(--ease) both; }
-.intro.is-opening .gate-right { animation: gate-right var(--gate-duration, 880ms) var(--ease) both; }
-@keyframes symbol-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(.96); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-@keyframes gate-left { to { transform: translate3d(-108%, -8%, 0); } }
-@keyframes gate-right { to { transform: translate3d(108%, 8%, 0); } }
 
 .footer { background: var(--canvas); padding-top: 22px; }
 .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 32px; align-items: center; }
@@ -418,7 +398,7 @@ html[lang="de"] .hero h1 { font-size:calc(var(--hero-size) * .86); }
 .compound-copy { grid-column:1 / -1; max-width:53ch; color:#dee9f0; }
 .compound-stat { justify-self:start; max-width:100%; }
 .compound-stat .label { color:#a7dbe8; margin-bottom:7px; }
-.compound-size { display:block; color:var(--action); font:normal 680 clamp(37px,6.4vw,91px)/.99 var(--ui); letter-spacing:-.052em; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.compound-size { display:block; color:var(--action); font:italic 680 clamp(37px,6.4vw,91px)/.99 var(--ui); letter-spacing:-.052em; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .compound-unit { font-size:.48em; }
 .compound-caption { margin-top:8px; text-align:end; }
 .locations { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
@@ -461,7 +441,7 @@ html[lang="de"] .hero h1 { font-size:calc(var(--hero-size) * .86); }
 }
 .future .section-head { position:relative; }
 .future .label { color:#8fe8ef; }
-.future-year { color:transparent; -webkit-text-stroke:1px #82d6e86e; font:normal 700 clamp(63px,8.15vw,124px)/.86 var(--text); letter-spacing:-.055em; margin-top:13px; }
+.future-year { font-size:clamp(63px,8.15vw,124px); width:2.26em; height:auto; margin-top:13px; }
 .future-features { display:grid; gap:clamp(33px,4vw,56px); }
 .future-features article { border-top:1px solid #7293a5; padding:9px 0; }
 .future-features [data-step] { transform:translateY(calc(var(--step-y,0px) * 2.8)); }
@@ -563,7 +543,7 @@ html[lang="de"] .hero h1 { font-size:calc(var(--hero-size) * .86); }
 }
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; }
-  .intro,.cursor-light { display:none!important; }
+  .cursor-light { display:none!important; }
   .portrait-frame > img,.compound-visual img { transform:none!important; }
 }
 

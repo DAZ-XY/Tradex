@@ -52,35 +52,6 @@
     menu.setAttribute('aria-expanded', String(open));
   }
 
-  function startIntro() {
-    const intro = document.querySelector('.intro');
-    if (reduceMotion.matches || location.hash || scrollY > 20) {
-      intro.remove();
-      return;
-    }
-
-    intro.style.setProperty('--gate-duration', `${settings.introOpenMs}ms`);
-    intro.hidden = false;
-
-    const start = setTimeout(() => intro.classList.add('is-opening'), settings.introHoldMs);
-    const timeout = setTimeout(finish, settings.introHoldMs + settings.introOpenMs + 100);
-    function finish() {
-      clearTimeout(start);
-      clearTimeout(timeout);
-      intro.remove();
-      schedule();
-      document.removeEventListener('keydown', finish);
-      document.removeEventListener('pointerdown', finish);
-      reduceMotion.removeEventListener('change', finish);
-    }
-    intro.querySelector('.gate-right').addEventListener('animationend', (event) => {
-      if (event.animationName === 'gate-right') finish();
-    });
-    document.addEventListener('keydown', finish, { once: true });
-    document.addEventListener('pointerdown', finish, { once: true });
-    reduceMotion.addEventListener('change', finish, { once: true });
-  }
-
   function installHeroSources() {
     const { enabled, mobile, mp4, mobilePoster } = config.media.hero;
     const compact = mobileHero.matches;
@@ -233,7 +204,7 @@
       const holdDistance = scene.element.id === 'purchasing'
         ? Math.min(240, Math.max(185, viewHeight * .235))
         : scene.element.id === 'coming'
-        ? Math.min(64, Math.max(36, viewHeight * .062))
+        ? Math.min(280, Math.max(180, viewHeight * .28))
         : scene.compact
         ? Math.min(55, Math.max(30, viewHeight * .055))
         : Math.min(270, Math.max(150, viewHeight * settings.holdRatio));
@@ -663,7 +634,6 @@
   collectScenes();
   installHeroSources();
   if ((!location.hash || location.hash === '#top') && scrollY < 20) updatePlayback(true);
-  startIntro();
   buildProfiles();
   installEntrances();
   menu.hidden = false;
