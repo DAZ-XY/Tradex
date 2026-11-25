@@ -14,18 +14,15 @@ window.TRADEX_CONFIG = {
     compoundTravel: .61,
     compoundStages: [[.09,.22],[.43,.58],[.82,1]],
     compoundCountStage: [.17,.43],
-    audienceTravel: .44,
-    audienceStages: [[0,0],[.55,1]],
+    compactTravel: .18,
+    compactStages: [[.025,.48],[.56,.96]],
+    futureStages: [[0,.44],[.52,.96]],
     purchasingTravel: .85,
     purchasingStages: [[0,0],[.22,.33],[.54,.65],[.87,1]],
-    futureTravel: .21,
-    futureHoldRatio: .16,
-    futureStages: [[0,.27],[.53,1]],
   },
   urls: {
     join: 'https://portal.tradexautos.com/customer/sign-up/?ref=carpeople',
     login: 'https://portal.tradexautos.com/customer/login/',
-    legalNotice: '',
   },
   media: {
     hero: {
@@ -37,7 +34,4 @@ window.TRADEX_CONFIG = {
     compound: '',
   },
   locations: { de: [], at: [] },
-  showComingIn2027: false,
-  // Add only signed-off records: bio { en, de }, focus { en, de }, language codes, email and phone.
-  approvedProfiles: {},
 };

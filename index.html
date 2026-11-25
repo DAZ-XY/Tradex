@@ -13,7 +13,7 @@
   <link rel="preload" href="assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="config.js" defer></script>
-  <!-- REVIEW CONFIG -->
+  <script src="profiles.js" defer></script>
   <script src="site.js" defer></script>
 </head>
 <body>
@@ -106,7 +106,7 @@
      <h2 id="compound-title" data-de="Unser Logistikstandort.">Our compound.</h2>
    </div>
    <div class="compound-visual">
-    <img id="compound-photo" width="1536" height="1024" loading="lazy" decoding="async" alt="" hidden>
+    <img id="compound-photo" src="assets/images/compound/compound-illustrative.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="Rows of cars at a vehicle logistics yard" data-de-alt="Fahrzeugreihen auf einem Logistikgelände">
     <div class="compound-content">
       <p class="compound-copy" data-de="Unser eigener Logistikstandort und unsere Werkstatt unterstützen die Fahrzeugvorbereitung, Verladung und Transportkoordination in Deutschland und Österreich.">Our own compound and workshop support vehicle preparation, loading and transport coordination across Germany and Austria.</p>
       <div class="compound-stat" data-step>
@@ -115,8 +115,16 @@
         <p data-de="Fahrzeuglogistikfläche">of vehicle logistics space</p>
       </div>
       <div class="locations">
-       <div class="location" data-location="de" data-step><h3 data-de="Deutschland">Germany</h3><p>TRADEX. Compound</p><address hidden></address></div>
-       <div class="location" data-location="at" data-step><h3 data-de="Österreich">Austria</h3><p>TRADEX. Compound</p><address hidden></address></div>
+       <div class="location" data-location="de" data-step>
+        <h3 data-de="Deutschland">Germany</h3>
+        <p>TRADEX. Compound</p>
+        <address>Am Fahrzeugpark 12<br>84030 Ergolding</address>
+       </div>
+       <div class="location" data-location="at" data-step>
+        <h3 data-de="Österreich">Austria</h3>
+        <p>TRADEX. Compound</p>
+        <address>Logistikring 8<br>4020 Linz</address>
+       </div>
       </div>
     </div>
    </div>
@@ -130,7 +138,7 @@
  <div class="motion-stage audience-stage">
  <div class="shell stage-body audience-layout">
   <div class="section-head" data-enter><p class="label" data-de="Unser Netzwerk">Our network</p><h2 id="audience-title" data-de="Händler &amp; Lieferanten.">Dealers &amp; suppliers.</h2></div>
-  <div class="audience-grid"><article data-step><h3 data-de="Für Händler.">For dealers.</h3><div class="audience-visual dealer-visual"><img src="assets/images/hero/hero-poster.webp" alt="" width="800" height="533" loading="lazy" decoding="async"></div><p data-de="Sie erhalten Zugang zu jungen, hochwertigen Gebrauchtwagen für Ihren Markt, mit einem Lieferpreis und einem persönlichen Ansprechpartner.">Access young, high-quality used vehicles suited to your market, with one delivered price and a dedicated account manager.</p><p data-de="Im TRADEX. Händlerportal verwalten Sie Käufe, Transportstatus, Dokumente und Rechnungen.">Manage your purchases, transport updates, documents and invoices through the TRADEX. dealer portal.</p></article><article id="suppliers" data-step><h3 data-de="Für Lieferanten.">For suppliers.</h3><div class="audience-visual"><img src="assets/images/audiences/vehicle-supply.webp" alt="" width="900" height="500" loading="lazy" decoding="async"></div><p data-de="Wir übernehmen Fahrzeugbestände von Leasinggesellschaften, Flottenbetreibern, Autovermietungen, Importeuren und Händlergruppen und vermitteln die Fahrzeuge an professionelle Händler in ganz Europa.">We purchase vehicle volumes from leasing, fleet and rental companies, importers and dealer groups, connecting their stock with professional dealers across Europe.</p><p data-de="Unser Team koordiniert die Beschaffung mit eigener Logistikinfrastruktur und einem europaweiten Händlernetz.">Our team coordinates the purchasing process, supported by our logistics infrastructure and dealer network.</p></article></div>
+  <div class="audience-grid"><article data-step><h3 data-de="Für Händler.">For dealers.</h3><div class="audience-visual dealer-visual"><img src="assets/images/audiences/dealer-forecourt.webp" alt="" width="900" height="400" loading="lazy" decoding="async"></div><p data-de="Sie erhalten Zugang zu jungen, hochwertigen Gebrauchtwagen für Ihren Markt, mit einem Lieferpreis und einem persönlichen Ansprechpartner.">Access young, high-quality used vehicles suited to your market, with one delivered price and a dedicated account manager.</p><p data-de="Im TRADEX. Händlerportal verwalten Sie Käufe, Transportstatus, Dokumente und Rechnungen.">Manage your purchases, transport updates, documents and invoices through the TRADEX. dealer portal.</p></article><article id="suppliers" data-step><h3 data-de="Für Lieferanten.">For suppliers.</h3><div class="audience-visual"><img src="assets/images/audiences/vehicle-supply.webp" alt="" width="900" height="500" loading="lazy" decoding="async"></div><p data-de="Wir übernehmen Fahrzeugbestände von Leasinggesellschaften, Flottenbetreibern, Autovermietungen, Importeuren und Händlergruppen und vermitteln die Fahrzeuge an professionelle Händler in ganz Europa.">We purchase vehicle volumes from leasing, fleet and rental companies, importers and dealer groups, connecting their stock with professional dealers across Europe.</p><p data-de="Unser Team koordiniert die Beschaffung mit eigener Logistikinfrastruktur und einem europaweiten Händlernetz.">Our team coordinates the purchasing process, supported by our logistics infrastructure and dealer network.</p></article></div>
  </div>
  <div class="section-rail shell"><a href="#purchasing" ><span data-de="Zum Fahrzeugeinkauf">Explore purchasing</span><i aria-hidden="true"></i></a></div>
  </div>
@@ -144,13 +152,12 @@
     <p class="label" data-de="Von der Auswahl bis zur Lieferung">From selection to delivery</p>
     <h2 id="purchase-title" data-de="Fahrzeugeinkauf.">Purchasing.</h2>
     <p class="section-intro" data-de="Im Händlerportal finden Sie Kaufdetails, Transportstatus und Dokumente an einem Ort. Mit Watchlist und Price watch behalten Sie interessante Fahrzeuge im Blick.">The dealer portal brings purchase details, transport status and documents together. Use Watchlist and Price watch to follow vehicles of interest.</p>
-    <figure class="portal-composition" aria-labelledby="portal-example">
-      <figcaption id="portal-example" class="label" data-de="Beispiel aus dem Händlerportal">Dealer portal example</figcaption>
+    <figure class="portal-composition" aria-labelledby="purchase-title">
       <div class="portal-stack">
         <div class="portal-fragment portal-vehicle" data-portal-stage="0">
           <div class="portal-vehicle-photo"><img src="assets/images/hero/hero-poster.webp" alt="" width="797" height="615" loading="eager" fetchpriority="low" decoding="async"></div>
           <div class="portal-vehicle-spec">
-            <span class="token-label" data-de="Beispielfahrzeug">Example vehicle</span>
+            <span class="token-label" data-de="Fahrzeug">Vehicle</span>
             <b data-de="Touring · Automatik">Touring · Automatic</b>
             <small data-de="2024 · 28.400 km">2024 · 28,400 km</small>
           </div>
@@ -176,11 +183,23 @@
    </div>
    <ol class="steps purchase-steps"><li class="purchase-step" data-step><div class="service-title"><span class="index">01</span><h3 data-de="Fahrzeugpaket auswählen">Choose your package</h3></div><p data-de="Finden Sie Fahrzeuge für Ihren Markt und wählen Sie Ihr Paket im Händlerportal aus.">Find vehicles suited to your market and select your package through the dealer portal.</p></li><li class="purchase-step" data-step><div class="service-title"><span class="index">02</span><h3 data-de="Zahlung vornehmen">Make your payment</h3></div><p data-de="Prüfen Sie die Kaufdetails und folgen Sie den Zahlungsanweisungen.">Review your purchase details and follow the payment instructions.</p></li><li class="purchase-step" data-step><div class="service-title"><span class="index">03</span><h3 data-de="Statusmeldungen erhalten">Receive updates</h3></div><p data-de="Verfolgen Sie Ihren Kauf anhand der FIN und rufen Sie Transportinformationen und Dokumente in Ihrem Konto ab.">Follow your purchase by VIN and access transport information and documents through your account.</p></li><li class="purchase-step" data-step><div class="service-title"><span class="index">04</span><h3 data-de="Fahrzeuge in Empfang nehmen">Receive your vehicles</h3></div><p data-de="Unser Logistikteam koordiniert die Lieferung an den vereinbarten Zielort.">Our logistics team coordinates delivery to your agreed destination.</p></li></ol>
   </div>
-  <div class="section-rail shell"><a href="#team" data-after-purchasing><span data-de="Das Team kennenlernen">Meet the team</span><i aria-hidden="true"></i></a></div>
+  <div class="section-rail shell"><a href="#coming"><span data-de="Geplant für 2027">Coming in 2027</span><i aria-hidden="true"></i></a></div>
  </div>
 </section>
 
-<!-- FUTURE SECTION -->
+<section id="coming" class="future pinned" aria-labelledby="coming-title" data-progress>
+
+ <div class="motion-stage future-stage">
+ <div class="shell stage-body future-layout">
+  <div class="section-head" data-enter><p class="label" data-de="Geplante Leistungen">Planned services</p><h2 id="coming-title" data-de="Geplant für 2027.">Coming in 2027.</h2><div class="future-year" aria-hidden="true">2027</div></div>
+  <div class="future-features">
+   <article data-step><p class="label" data-de="Für Anfang 2027 geplant">Planned for early 2027</p><h3 data-de="Zahlungsziele von bis zu 60 Tagen">Payment terms of up to 60 days</h3><p data-de="Längere Zahlungsziele sollen berechtigten Fachhändlern mehr Flexibilität beim Fahrzeugkauf geben.">Extended payment terms are intended to give eligible professional dealers greater flexibility when managing vehicle purchases.</p></article>
+   <article data-step><p class="label" data-de="Geplante Leistung">Planned service</p><h3 data-de="Fahrzeughandel als Dienstleistung">Trading as a service</h3><p data-de="Eine geplante Leistung für Leasinggesellschaften, Flottenbetreiber und Autovermietungen. TRADEX. soll Verkauf, Vertrieb an Händler, Transport und Dokumentation koordinieren.">A planned service for leasing, fleet and rental companies, with TRADEX. coordinating vehicle sales, dealer distribution, transport and documentation.</p></article>
+  </div>
+ </div>
+ <div class="section-rail shell"><a href="#team" ><span data-de="Das Team kennenlernen">Meet the team</span><i aria-hidden="true"></i></a></div>
+ </div>
+</section>
 
 <section id="team" class="team paper" aria-labelledby="team-title" data-progress>
 
@@ -208,7 +227,7 @@
       <nav aria-label="Footer navigation" data-de-label="Navigation in der Fußzeile">
         <a href="#ecosystem" data-de="Unser Netzwerk">Our ecosystem</a>
         <a href="#compound" data-de="Logistik">Our compound</a>
-        <!-- REVIEW FOOTER -->
+        <a href="#coming" data-de="Geplant für 2027">Coming in 2027</a>
         <a href="#team" data-de="Unser Team">Team</a>
         <a data-url="login" href="https://portal.tradexautos.com/customer/login/">Login</a>
         <a data-url="join" href="https://portal.tradexautos.com/customer/sign-up/?ref=carpeople" data-de="TRADEX. beitreten">Join TRADEX.</a>
@@ -216,8 +235,7 @@
       <a class="footer-contact" href="mailto:operations@tradex-auto.com">operations@tradex-auto.com</a>
     </div>
     <div class="shell legal">
-      <span id="legal-pending" data-de="Impressum (folgt)">Legal notice pending</span>
-      <a id="legal-notice" hidden data-de="Impressum">Legal notice</a>
+      <a href="https://www.tradex-auto.com/en/imprint" data-de-href="https://www.tradex-auto.com/de/imprint" data-de="Impressum">Legal notice</a>
       <a href="https://portal.tradexautos.com/customer/customer-privacy-policy/" data-de="Datenschutzerklärung">Privacy policy</a>
       <a href="https://portal.tradexautos.com/customer/terms-and-conditions/" data-de="AGB">Terms</a>
     </div>

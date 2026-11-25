@@ -20,10 +20,16 @@
   const videoToggle = by('#video-toggle');
   const languageBar = by('.languages');
   const localeButtons = all('[data-lang]', languageBar);
-  const review = window.TRADEX_REVIEW || null;
   const cursor = by('.cursor-light');
   const count = by('#compound-count');
   const scenes = new Map();
+  const navigationType = performance.getEntriesByType('navigation')[0]?.type;
+  const restoreNativeScroll = navigationType === 'reload' || navigationType === 'back_forward';
+  const scrollKey = `tradex-scroll:${location.pathname}${location.search}${location.hash}`;
+  let refreshPosition = null;
+  if (navigationType === 'reload') {
+    try { refreshPosition = JSON.parse(sessionStorage.getItem(scrollKey)); } catch {}
+  }
   let lang = 'en';
   let areaFormat = new Intl.NumberFormat('en-GB');
   let frame = 0;
@@ -124,51 +130,25 @@
   }
 
 
-  function installOptionalContent() {
+  function installConfiguredContent() {
     all('[data-url]').forEach(link => { link.href = config.urls[link.dataset.url]; });
-    if (config.urls.legalNotice) {
-      const notice = by('#legal-notice');
-      notice.href = config.urls.legalNotice;
-      notice.hidden = false;
-      by('#legal-pending').hidden = true;
-    }
-    const coming = by('#coming');
-    if (coming && !config.showComingIn2027 && !review?.showComingIn2027) {
-      coming.remove();
-      by('[data-coming-link]')?.remove();
-    } else if (coming) {
-      const link = by('[data-after-purchasing]');
-      link.href = '#coming';
-      const label = by('span', link);
-      label.textContent = 'Coming in 2027';
-      label.dataset.de = 'Geplant für 2027';
-    }
 
     const compoundPhoto = by('#compound-photo');
-    const compoundPath = config.media.compound || review?.compoundImage;
-    if (compoundPath) {
-      compoundPhoto.src = compoundPath;
-      compoundPhoto.alt = config.media.compound ? 'TRADEX. vehicle logistics compound' : 'Illustrative aerial view of a vehicle logistics yard';
-      compoundPhoto.dataset.deAlt = config.media.compound ? 'TRADEX. Fahrzeuglogistikstandort' : 'Illustrative Luftaufnahme eines Fahrzeuglogistikstandorts';
-      compoundPhoto.hidden = false;
+    if (config.media.compound) {
+      compoundPhoto.src = config.media.compound;
+      compoundPhoto.alt = 'TRADEX. vehicle logistics compound';
+      compoundPhoto.dataset.deAlt = 'TRADEX. Fahrzeuglogistikstandort';
     }
 
-  }
-
-  function updateLocations() {
     for (const location of all('[data-location]')) {
-      const code = location.dataset.location;
+      const lines = config.locations[location.dataset.location];
+      if (!lines?.length) continue;
       const address = by('address', location);
-      const lines = config.locations[code];
-      const content = lines.length ? lines : review?.locations[code]?.[lang];
       address.replaceChildren();
-      address.hidden = !content?.length;
-      if (address.hidden) continue;
-      for (const line of content) {
-        const row = document.createElement('div');
-        row.textContent = line;
-        address.append(row);
-      }
+      lines.forEach((line, index) => {
+        if (index) address.append(document.createElement('br'));
+        address.append(line);
+      });
     }
   }
 
@@ -199,15 +179,14 @@
       top: () => mobileHero.matches ? settings.heroTravelMobile : settings.heroTravelDesktop,
       ecosystem: () => settings.ecosystemTravel,
       compound: () => settings.compoundTravel,
-      dealers: () => settings.audienceTravel,
       purchasing: () => settings.purchasingTravel,
-      coming: () => settings.futureTravel,
     };
     for (const element of all('[data-progress]')) {
       const stage = by('.motion-stage', element);
       const steps = all('[data-step]', element);
+      const compact = element.id === 'dealers' || element.id === 'coming';
       scenes.set(element.id, {
-        element, stage, ratio: ratios[element.id], steps,
+        element, stage, ratio: ratios[element.id], steps, compact, fullStage: element.id === 'coming',
         arcs: all('.orbit-active', element),
         points: all('.orbit-point', element),
         orbit: by('.orbit-turn', element),
@@ -231,23 +210,30 @@
     const motion = !reduceMotion.matches;
     root.classList.toggle('motion', motion);
     arrangePortal();
+    const headerHeight = header.offsetHeight;
     summaryShift = mobileHero.matches ? Math.min(heroSummary.offsetHeight * .74, viewHeight * .31) : viewHeight * .13;
     for (const scene of scenes.values()) {
       const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580);
       scene.element.classList.toggle('is-pinned', Boolean(canPin));
       const height = scene.stage?.offsetHeight || 0;
-      scene.inset = canPin ? (parseFloat(getComputedStyle(scene.stage).top) || 0) : 0;
+      scene.inset = scene.compact && !scene.fullStage
+        ? Math.max(headerHeight, Math.floor((viewHeight - height + headerHeight) / 2))
+        : 0;
       const fits = canPin && height + scene.inset <= viewHeight + 1;
-      scene.reveal = fits ? Math.round(viewHeight * scene.ratio()) : 0;
-      // A compact stage needs a shorter hold so its scroll space does not read as padding.
-      const holdDistance = scene.inset
-        ? Math.min(160, Math.max(110, viewHeight * settings.futureHoldRatio))
+      const revealDistance = scene.compact
+        ? Math.min(150, Math.max(90, viewHeight * settings.compactTravel))
+        : viewHeight * (scene.ratio?.() ?? 0);
+      scene.reveal = fits ? Math.round(revealDistance) : 0;
+      const holdDistance = scene.compact
+        ? Math.min(55, Math.max(30, viewHeight * .055))
         : Math.min(270, Math.max(150, viewHeight * settings.holdRatio));
       const hold = fits ? Math.round(holdDistance) : 0;
       scene.travel = scene.reveal + hold;
       if (!fits) scene.element.classList.remove('is-pinned');
+      scene.element.style.setProperty('--pin-inset', `${scene.inset}px`);
       scene.element.style.setProperty('--scene-height', `${height}px`);
       scene.element.style.setProperty('--travel', `${scene.travel}px`);
+      scene.stageHeight = height;
     }
     sceneGeometry = [...scenes.values()].map(scene => {
       const bounds = scene.element.getBoundingClientRect();
@@ -320,14 +306,17 @@
 
   function goToSection(destination, focus = false) {
     const scene = sceneGeometry.find(item => item.element === destination);
-    const complete = destination.id === 'compound' || destination.id === 'coming';
+    const complete = destination.id === 'compound' || scene?.compact;
     const preview = destination.id === 'purchasing';
     const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
     const top = scene?.top ?? destination.getBoundingClientRect().top + scrollY;
     const entryProgress = complete ? 1 : destination.id === 'ecosystem' ? settings.ecosystemStages[1][1] : 0;
     const y = scene?.reveal ? Math.ceil(scene.pinStart + scene.reveal * entryProgress)
       : destination === hero ? 0 : Math.max(0, top - padding);
-    directEntry = complete || preview ? {id: destination.id, y, complete} : null;
+    // Pinned compact scenes reach their final frame at the anchor itself.
+    directEntry = (complete && !(scene?.compact && scene.reveal)) || preview
+      ? {id: destination.id, y, complete}
+      : null;
     if (focus) {
       destination.setAttribute('tabindex', '-1');
       destination.focus({ preventScroll: true });
@@ -345,11 +334,35 @@
     }
   }
 
+  function rememberCompactPosition() {
+    const y = scrollY;
+    const scene = sceneGeometry.find(item => item.compact
+      && y >= item.top - viewHeight && y < item.top + item.height - header.offsetHeight);
+    const key = `tradex-scroll:${location.pathname}${location.search}${location.hash}`;
+    try {
+      if (scene) {
+        sessionStorage.setItem(key, JSON.stringify({ id: scene.element.id, offset: y - scene.top }));
+      } else {
+        sessionStorage.removeItem(key);
+      }
+    } catch {}
+  }
+
+  function restoreCompactPosition() {
+    const scene = sceneGeometry.find(item => item.element.id === refreshPosition.id);
+    if (scene && Number.isFinite(refreshPosition.offset)) {
+      window.scrollTo({ top:scene.top + refreshPosition.offset, behavior:'instant' });
+    }
+    refreshPosition = null;
+  }
+
   function updateStages(scene, progress, isPinned, windows, entry) {
     let active = 0;
     const amounts = windows.map((range, index) => {
       if (entry?.complete || (entry && index === 0)) return 1;
-      return isPinned ? amountAt(progress, range) : revealInFlow(scene.steps[index]);
+      if (isPinned) return amountAt(progress, range);
+      if (scene.compact) return revealInFlow(scene.steps[index], .98 - index * .10, .83 - index * .10);
+      return revealInFlow(scene.steps[index]);
     });
     if (!reduceMotion.matches) {
       for (let i = 0; i < amounts.length; i += 1) {
@@ -371,6 +384,17 @@
         setReveal(fragment, inStack ? value : 1);
       }
     });
+    return amounts;
+  }
+
+  function compactProgress(scene, y) {
+    const fullyVisible = Math.min(scene.top + scene.stageHeight - viewHeight, scene.pinStart - 28);
+    const lead = Math.min(112, Math.max(55, viewHeight * .12));
+    // Start the first reveal on approach, then reserve the pinned travel for the second.
+    const approach = .16 * ramp(y, fullyVisible - lead, fullyVisible);
+    const arrival = .32 * ramp(y, fullyVisible, scene.pinStart);
+    const pinned = .52 * ramp(y, scene.pinStart, scene.pinStart + scene.reveal);
+    return approach + arrival + pinned;
   }
 
   function render() {
@@ -379,7 +403,7 @@
     let active = '';
     const windows = {
       compound: settings.compoundStages,
-      dealers: settings.audienceStages,
+      dealers: settings.compactStages,
       purchasing: settings.purchasingStages,
       coming: settings.futureStages,
     };
@@ -389,14 +413,17 @@
       const bottom = scene.top + scene.height;
       if (directEntry?.id === id && (y < directEntry.y - (pinned ? 2 : 24) || bottom <= y)) directEntry = null;
       const entry = directEntry?.id === id ? directEntry : null;
-      const progress = clamp(pinned ? (y - scene.pinStart) / scene.reveal
+      const progress = scene.compact && !scene.fullStage && pinned ? compactProgress(scene, y) : clamp(pinned ? (y - scene.pinStart) / scene.reveal
         : (y + viewHeight * .2 - scene.top) / Math.max(viewHeight * .28, scene.height - viewHeight * .67));
-      const rail = entry?.complete || reduceMotion.matches ? 1 : progress;
-      scene.element.style.setProperty('--section-progress', rail.toFixed(3));
+      let rail = entry?.complete || reduceMotion.matches ? 1 : progress;
       if (scene.top <= y + viewHeight * .29) active = id;
       if (id === 'top') updateHero(progress, pinned, y, scene.top, bottom);
       else if (id === 'ecosystem') updateEcosystem(scene, progress, pinned);
-      else if (windows[id]) updateStages(scene, progress, pinned, windows[id], entry);
+      else if (windows[id]) {
+        const amounts = updateStages(scene, progress, pinned, windows[id], entry);
+        if (scene.compact && !pinned) rail = (amounts[0] + amounts[1]) / 2;
+      }
+      scene.element.style.setProperty('--section-progress', rail.toFixed(3));
       if (id === 'compound') updateCompoundCount(scene, progress, entry?.complete);
     }
     if (active !== currentNav) {
@@ -449,8 +476,8 @@
   function buildProfiles() {
     for (const person of all('[data-person]')) {
       const id = person.dataset.person;
-      const datum = { ...review?.profiles[id], ...config.approvedProfiles[id] };
-      if (!Object.keys(datum).length) continue;
+      const datum = window.TRADEX_PROFILES[id];
+      if (!datum) continue;
       const trigger = by('.portrait-trigger', person);
       const panel = by('.inline-profile', person);
       const name = by('.person-meta h3', person);
@@ -465,19 +492,15 @@
         list.setAttribute('aria-label', 'Languages');
         list.dataset.deLabel = 'Sprachen';
         for (const code of datum.languages) {
-          if (!languages[code]) continue;
+          if (!flags[code]) continue;
           const li = document.createElement('li');
-          const label = document.createElement('span');
-          label.textContent = languages[code][0];
-          localiseInline(label, languages[code][1]);
-          if (flags[code]) {
-            const flag = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            flag.setAttribute('viewBox', '0 0 24 15');
-            flag.setAttribute('aria-hidden', 'true');
-            flag.innerHTML = flags[code];
-            li.append(flag);
-          }
-          li.append(label);
+          const flag = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          flag.setAttribute('viewBox', '0 0 24 15');
+          flag.setAttribute('role', 'img');
+          flag.setAttribute('aria-label', languages[code][0]);
+          flag.dataset.deLabel = languages[code][1];
+          flag.innerHTML = flags[code];
+          li.append(flag);
           list.append(li);
         }
         panel.append(list);
@@ -495,7 +518,7 @@
       trigger.hidden = false;
       const record = { person, trigger, panel, pinned: false };
       person.addEventListener('pointerenter', event => {
-        if (event.pointerType === 'mouse' && finePointer.matches) openProfile(record, false);
+        if (event.pointerType === 'mouse' || (event.pointerType === 'pen' && event.buttons === 0)) openProfile(record, false);
       });
       person.addEventListener('pointerleave', () => {
         if (activeProfile === record && !record.pinned && !panel.contains(document.activeElement)) closeProfile();
@@ -503,18 +526,19 @@
       trigger.addEventListener('focus', () => {
         if (!ignoreProfileFocus && trigger.matches(':focus-visible')) openProfile(record, false);
       });
-      trigger.addEventListener('click', () => {
+      function toggleProfile() {
         if (activeProfile === record && record.pinned) closeProfile(true);
         else openProfile(record, true);
+      }
+      trigger.addEventListener('click', toggleProfile);
+      panel.addEventListener('click', event => {
+        if (!event.target.closest('a,button')) toggleProfile();
       });
       person.addEventListener('focusout', event => {
         if (activeProfile === record && !person.contains(event.relatedTarget) && !person.matches(':hover')) closeProfile();
       });
       panel.hidden = false;
       panel.inert = true;
-      person.addEventListener('click', event => {
-        if (activeProfile === record && record.pinned && !event.target.closest('a,button')) closeProfile();
-      });
     }
   }
 
@@ -527,10 +551,6 @@
     record.pinned ||= pinned;
     record.panel.inert = false;
     record.person.classList.add('is-expanded');
-    if (record.panel.scrollHeight > record.panel.clientHeight + 2) {
-      record.person.classList.add('uses-inline-profile');
-      measureMotion();
-    }
     record.trigger.setAttribute('aria-expanded', 'true');
   }
 
@@ -540,11 +560,8 @@
     activeProfile.pinned = false;
     activeProfile = null;
     panel.inert = true;
+    panel.scrollTop = 0;
     person.classList.remove('is-expanded');
-    if (person.classList.contains('uses-inline-profile')) {
-      person.classList.remove('uses-inline-profile');
-      measureMotion();
-    }
     trigger.setAttribute('aria-expanded', 'false');
     if (restoreFocus) {
       ignoreProfileFocus = true;
@@ -559,7 +576,7 @@
     areaFormat = new Intl.NumberFormat(lang === 'de' ? 'de-DE' : 'en-GB');
     count.textContent = areaFormat.format(lastArea);
     document.title = lang === 'de' ? 'TRADEX. | Europäischer Fahrzeughandel' : 'TRADEX. | European car trading';
-    for (const [suffix, property] of [['', ''], ['-label', 'aria-label'], ['-alt', 'alt']]) {
+    for (const [suffix, property] of [['', ''], ['-label', 'aria-label'], ['-alt', 'alt'], ['-href', 'href']]) {
       all(`[data-de${suffix}]`).forEach(element => {
         const original = property ? element.getAttribute(property) : element.textContent;
         const key = `data-en${suffix}`;
@@ -575,7 +592,6 @@
       element.innerHTML = lang === 'de' ? element.dataset.deHtml : element.dataset.enHtml;
     });
     for (const button of localeButtons) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
-    updateLocations();
     updateVideoControl();
     measureMotion();
   }
@@ -611,7 +627,7 @@
   }
 
   root.classList.add('js');
-  installOptionalContent();
+  installConfiguredContent();
   collectScenes();
   installHeroSources();
   if ((!location.hash || location.hash === '#top') && scrollY < 20) updatePlayback(true);
@@ -688,9 +704,12 @@
     measureMotion();
     restoreSectionFromHash();
   });
+  window.addEventListener('pagehide', rememberCompactPosition);
   window.addEventListener('pageshow', event => {
     measureMotion();
-    if (!event.persisted && location.hash) restoreSectionFromHash();
+    // Native reloads can restore before sticky heights are applied. Resolve the saved offset against measured geometry.
+    if (!event.persisted && refreshPosition) requestAnimationFrame(restoreCompactPosition);
+    if (!event.persisted && !restoreNativeScroll && location.hash) restoreSectionFromHash();
   });
   window.addEventListener('scroll', schedule, { passive:true });
   window.addEventListener('resize', measureMotion, { passive:true });
@@ -708,5 +727,5 @@
   let savedLanguage = 'en';
   try { savedLanguage = localStorage.getItem('tradex-language') === 'de' ? 'de' : 'en'; } catch {}
   translatePage(savedLanguage);
-  if (location.hash) restoreSectionFromHash();
+  if (!restoreNativeScroll && location.hash) restoreSectionFromHash();
 })();
