@@ -8,9 +8,7 @@
   <meta name="description" content="TRADEX. connects professional dealers and vehicle suppliers across Europe, handling vehicle sourcing, delivered pricing, transport and documents.">
   <title>TRADEX. | European vehicle trading</title>
   <link rel="icon" href="assets/logos/tradex-x-symbol.svg" type="image/svg+xml">
-  <link rel="preload" href="assets/images/hero/hero-video-poster.webp" as="image" media="(min-width:721px)">
-  <link rel="preload" href="assets/fonts/Oswald-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="preload" href="assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/images/hero/hero-video-poster.webp" as="image">
   <link rel="stylesheet" href="styles.css">
   <script src="config.js" defer></script>
   <script src="profiles.js" defer></script>
@@ -54,10 +52,13 @@
 <section id="top" class="hero pinned" aria-labelledby="hero-title" data-progress>
 
   <div class="hero-stage motion-stage">
-    <div class="hero-media" aria-hidden="true"><video id="hero-video" muted loop playsinline preload="auto" poster="assets/images/hero/hero-video-poster.webp" disablepictureinpicture></video></div>
+    <div class="hero-media" aria-hidden="true"><video id="hero-video" muted loop playsinline preload="metadata" poster="assets/images/hero/hero-video-poster.webp" disablepictureinpicture></video></div>
     <div class="hero-copy shell">
       <div class="hero-heading">
-        <p class="hero-slogan label">THE POWER OF EXCHANGE.</p>
+        <div class="hero-signature">
+          <img class="hero-mark" src="assets/logos/tradex-x-symbol.svg" alt="" width="792" height="686">
+          <p class="hero-slogan label">THE POWER OF <span class="slogan-accent">EXCHANGE</span>.</p>
+        </div>
         <h1 id="hero-title"><span data-de="EUROPAS">EUROPE&#x27;S</span> <span data-de="FAHRZEUGHANDEL ALS">CAR TRADING</span> <span data-de="ÖKOSYSTEM.">ECOSYSTEM.</span></h1>
       </div>
       <div class="hero-summary"><p class="summary-lede" data-de="TRADEX. verbindet professionelle Autohändler und Fahrzeuglieferanten in ganz Europa.">TRADEX. connects professional car dealers and vehicle suppliers across Europe.</p>
@@ -111,8 +112,8 @@
       <p class="compound-copy" data-de="Unser eigener Logistikstandort und unsere Werkstatt unterstützen die Fahrzeugvorbereitung, Verladung und Transportkoordination in Deutschland und Österreich.">Our own compound and workshop support vehicle preparation, loading and transport coordination across Germany and Austria.</p>
       <div class="compound-stat" data-step>
         <p class="label" data-de="Rund">Approximately</p>
-        <p class="compound-size"><span id="compound-count" aria-hidden="true">100,000</span> <span aria-hidden="true">m²</span><span class="sr-only" data-de="100.000 Quadratmeter">100,000 square metres</span></p>
-        <p data-de="Fahrzeuglogistikfläche">of vehicle logistics space</p>
+        <p class="compound-size"><span id="compound-count" aria-hidden="true">100,000</span> <span class="compound-unit" aria-hidden="true">m²</span><span class="sr-only" data-de="100.000 Quadratmeter">100,000 square metres</span></p>
+        <p class="compound-caption" data-de="Fahrzeuglogistikfläche">of vehicle logistics space</p>
       </div>
       <div class="locations">
        <div class="location" data-location="de" data-step>
@@ -217,7 +218,7 @@
 <section id="join" class="join" aria-labelledby="join-title" data-progress>
 
  <img class="join-x" src="assets/logos/tradex-x-symbol.svg" alt="" width="600" height="520" loading="lazy" decoding="async">
- <div class="shell join-inner"><div data-enter><h2 id="join-title" data-de="TRADEX. beitreten">Join TRADEX.</h2><p data-de="Werden Sie Teil des europäischen Netzwerks professioneller Fahrzeughändler und Lieferanten. Ein Ökosystem deckt alle Ihre Anforderungen im Fahrzeughandel ab.">Become part of the European network of professional vehicle dealers and suppliers, with access to an ecosystem that covers all your car trading needs.</p></div></div>
+ <div class="shell join-inner"><div data-enter><h2 id="join-title">THE POWER OF <span class="slogan-accent">EXCHANGE</span>.</h2><p data-de="Werden Sie Teil des europäischen Netzwerks professioneller Fahrzeughändler und Lieferanten. Ein Ökosystem deckt alle Ihre Anforderungen im Fahrzeughandel ab.">Become part of the European network of professional vehicle dealers and suppliers, with access to an ecosystem that covers all your car trading needs.</p><span class="join-action"><a class="button" data-url="join" href="https://portal.tradexautos.com/customer/sign-up/?ref=carpeople"><span data-de="TRADEX. beitreten">Join TRADEX.</span></a></span></div></div>
  <div class="section-rail shell"><a href="#top" ><span data-de="Nach oben">Back to top</span><i aria-hidden="true"></i></a></div>
 </section>
   </main>

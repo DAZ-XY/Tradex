@@ -185,8 +185,10 @@
       const stage = by('.motion-stage', element);
       const steps = all('[data-step]', element);
       const compact = element.id === 'dealers' || element.id === 'coming';
+      const earlyReveal = element.id === 'purchasing' || element.id === 'coming';
       scenes.set(element.id, {
-        element, stage, ratio: ratios[element.id], steps, compact, fullStage: element.id === 'coming',
+        element, stage, ratio: ratios[element.id], steps, compact, earlyReveal,
+        heading: earlyReveal ? by('.section-head', element) : null,
         arcs: all('.orbit-active', element),
         points: all('.orbit-point', element),
         orbit: by('.orbit-turn', element),
@@ -216,15 +218,23 @@
       const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580);
       scene.element.classList.toggle('is-pinned', Boolean(canPin));
       const height = scene.stage?.offsetHeight || 0;
-      scene.inset = scene.compact && !scene.fullStage
-        ? Math.max(headerHeight, Math.floor((viewHeight - height + headerHeight) / 2))
-        : 0;
+      scene.inset = 0;
+      if (scene.element.id === 'coming') {
+        const maxInset = viewHeight - height;
+        scene.inset = Math.max(headerHeight, Math.min(maxInset, headerHeight + Math.min(32, viewHeight * .035)));
+      } else if (scene.compact) {
+        scene.inset = Math.max(headerHeight, Math.floor((viewHeight - height + headerHeight) / 2));
+      }
       const fits = canPin && height + scene.inset <= viewHeight + 1;
       const revealDistance = scene.compact
         ? Math.min(150, Math.max(90, viewHeight * settings.compactTravel))
         : viewHeight * (scene.ratio?.() ?? 0);
       scene.reveal = fits ? Math.round(revealDistance) : 0;
-      const holdDistance = scene.compact
+      const holdDistance = scene.element.id === 'purchasing'
+        ? Math.min(240, Math.max(185, viewHeight * .235))
+        : scene.element.id === 'coming'
+        ? Math.min(64, Math.max(36, viewHeight * .062))
+        : scene.compact
         ? Math.min(55, Math.max(30, viewHeight * .055))
         : Math.min(270, Math.max(150, viewHeight * settings.holdRatio));
       const hold = fits ? Math.round(holdDistance) : 0;
@@ -238,7 +248,16 @@
     sceneGeometry = [...scenes.values()].map(scene => {
       const bounds = scene.element.getBoundingClientRect();
       const top = bounds.top + scrollY;
-      return { ...scene, top, pinStart: top - scene.inset, height: bounds.height };
+      const pinStart = top - scene.inset;
+      let approachStart = pinStart;
+      if (scene.earlyReveal && scene.reveal) {
+        const stageTop = scene.stage.getBoundingClientRect().top;
+        const headingTop = scene.heading.getBoundingClientRect().top;
+        const stepTop = scene.steps[0].getBoundingClientRect().top;
+        const firstVisible = top + Math.max(headingTop, stepTop) - stageTop - viewHeight * .83;
+        approachStart = pinStart - Math.min(viewHeight * .59, Math.max(80, pinStart - firstVisible));
+      }
+      return { ...scene, top, pinStart, approachStart, height: bounds.height };
     });
     installHeroSources();
     schedule();
@@ -311,10 +330,11 @@
     const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
     const top = scene?.top ?? destination.getBoundingClientRect().top + scrollY;
     const entryProgress = complete ? 1 : destination.id === 'ecosystem' ? settings.ecosystemStages[1][1] : 0;
-    const y = scene?.reveal ? Math.ceil(scene.pinStart + scene.reveal * entryProgress)
+    const entryDistance = preview && scene?.reveal ? scene.reveal * .05 : (scene?.reveal || 0) * entryProgress;
+    const y = scene?.reveal ? Math.ceil(scene.pinStart + entryDistance)
       : destination === hero ? 0 : Math.max(0, top - padding);
     // Pinned compact scenes reach their final frame at the anchor itself.
-    directEntry = (complete && !(scene?.compact && scene.reveal)) || preview
+    directEntry = (complete && !(scene?.compact && scene.reveal)) || (preview && !scene?.reveal)
       ? {id: destination.id, y, complete}
       : null;
     if (focus) {
@@ -336,8 +356,9 @@
 
   function rememberCompactPosition() {
     const y = scrollY;
-    const scene = sceneGeometry.find(item => item.compact
-      && y >= item.top - viewHeight && y < item.top + item.height - header.offsetHeight);
+    const visible = item => y >= item.top - viewHeight && y < item.top + item.height - header.offsetHeight;
+    const candidates = sceneGeometry.filter(item => (item.compact || item.earlyReveal) && visible(item));
+    const scene = candidates.find(item => y >= item.approachStart && y >= item.top - item.inset) || candidates[0];
     const key = `tradex-scroll:${location.pathname}${location.search}${location.hash}`;
     try {
       if (scene) {
@@ -357,11 +378,12 @@
   }
 
   function updateStages(scene, progress, isPinned, windows, entry) {
-    let active = 0;
+    let active = -1;
     const amounts = windows.map((range, index) => {
       if (entry?.complete || (entry && index === 0)) return 1;
       if (isPinned) return amountAt(progress, range);
       if (scene.compact) return revealInFlow(scene.steps[index], .98 - index * .10, .83 - index * .10);
+      if (scene.earlyReveal) return revealInFlow(scene.steps[index], .98, .80);
       return revealInFlow(scene.steps[index]);
     });
     if (!reduceMotion.matches) {
@@ -397,6 +419,17 @@
     return approach + arrival + pinned;
   }
 
+  function stageProgress(scene, y) {
+    if (!scene.reveal) {
+      return clamp((y + viewHeight * .2 - scene.top) / Math.max(viewHeight * .28, scene.height - viewHeight * .67));
+    }
+    if (scene.earlyReveal) {
+      const approach = .26 * ramp(y, scene.approachStart, scene.pinStart);
+      return approach + .74 * ramp(y, scene.pinStart, scene.pinStart + scene.reveal);
+    }
+    return scene.compact ? compactProgress(scene, y) : clamp((y - scene.pinStart) / scene.reveal);
+  }
+
   function render() {
     frame = 0;
     const y = scrollY;
@@ -413,15 +446,14 @@
       const bottom = scene.top + scene.height;
       if (directEntry?.id === id && (y < directEntry.y - (pinned ? 2 : 24) || bottom <= y)) directEntry = null;
       const entry = directEntry?.id === id ? directEntry : null;
-      const progress = scene.compact && !scene.fullStage && pinned ? compactProgress(scene, y) : clamp(pinned ? (y - scene.pinStart) / scene.reveal
-        : (y + viewHeight * .2 - scene.top) / Math.max(viewHeight * .28, scene.height - viewHeight * .67));
+      const progress = stageProgress(scene, y);
       let rail = entry?.complete || reduceMotion.matches ? 1 : progress;
       if (scene.top <= y + viewHeight * .29) active = id;
       if (id === 'top') updateHero(progress, pinned, y, scene.top, bottom);
       else if (id === 'ecosystem') updateEcosystem(scene, progress, pinned);
       else if (windows[id]) {
         const amounts = updateStages(scene, progress, pinned, windows[id], entry);
-        if (scene.compact && !pinned) rail = (amounts[0] + amounts[1]) / 2;
+        if ((scene.compact || scene.earlyReveal) && !pinned) rail = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
       }
       scene.element.style.setProperty('--section-progress', rail.toFixed(3));
       if (id === 'compound') updateCompoundCount(scene, progress, entry?.complete);
@@ -496,11 +528,12 @@
           const li = document.createElement('li');
           const flag = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
           flag.setAttribute('viewBox', '0 0 24 15');
-          flag.setAttribute('role', 'img');
-          flag.setAttribute('aria-label', languages[code][0]);
-          flag.dataset.deLabel = languages[code][1];
+          flag.setAttribute('aria-hidden', 'true');
           flag.innerHTML = flags[code];
-          li.append(flag);
+          const label = document.createElement('span');
+          label.textContent = languages[code][0];
+          localiseInline(label, languages[code][1]);
+          li.append(flag, label);
           list.append(li);
         }
         panel.append(list);
@@ -560,7 +593,6 @@
     activeProfile.pinned = false;
     activeProfile = null;
     panel.inert = true;
-    panel.scrollTop = 0;
     person.classList.remove('is-expanded');
     trigger.setAttribute('aria-expanded', 'false');
     if (restoreFocus) {

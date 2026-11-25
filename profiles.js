@@ -15,7 +15,7 @@ window.TRADEX_PROFILES = {
     languages:['de','en','da'],
   },
   'fabio-nascimento': {
-    bio: { en:"Fabio is a partner at TRADEX. and a trade manager in sales. He looks after dealers across Europe, from their first enquiry to delivery.", de:"Fabio ist Partner bei TRADEX. und Trade Manager im Vertrieb. Er betreut Händler in ganz Europa von der ersten Anfrage bis zur Auslieferung." },
+    bio: { en:"With 23 years of automotive experience spanning technical operations, premium-brand sales and dealership ownership, Fábio now focuses on cross-border B2B trading, building strong customer relationships and helping dealers find the right solutions.", de:"Fábio bringt 23 Jahre Erfahrung in der Automobilbranche mit, von der Technik über den Verkauf von Premiummarken bis zum eigenen Autohaus. Heute konzentriert er sich auf den grenzüberschreitenden B2B-Handel, pflegt Kundenbeziehungen und hilft Händlern, passende Lösungen zu finden." },
     focus: { en:"Trade management · Dealer support", de:"Trade Management · Händlerbetreuung" },
     languages:['de','en','it','es','pt','fr'],
   },

@@ -1,12 +1,17 @@
-TRADEX. Website V02 | Revision 13
+TRADEX. Website V02 | Revision 16
 
 Upload this ZIP to Netlify or open the extracted index.html in a browser.
 The website is static and needs no build command or backend. Publish from
 the folder containing index.html if deploying the extracted files.
 
-The ZIP and standalone preview contain the full English and German landing
-page, including Coming in 2027 and all 12 team profiles. Team descriptions
-appear on mouse hover, keyboard focus or tap.
+Alpino, General Sans, Satoshi and Switzer load locally from assets/fonts.
+The supplied official Fontshare webfont files are included for self-hosting
+this website. The ITF Free Font License is in assets/fonts/ITF-FFL.txt.
+Independent licensees obtain their own font copies directly from Fontshare.
+
+The ZIP contains the full English and German landing page, including Coming
+in 2027 and all 12 team profiles. Team descriptions appear on mouse hover,
+keyboard focus or tap. The hero montage and poster are included.
 
 The website includes a noindex directive in index.html and _headers for
 client review. Remove both when the approved website should be indexed.
