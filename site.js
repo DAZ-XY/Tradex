@@ -1,0 +1,712 @@
+(() => {
+  const root = document.documentElement;
+  const config = window.TRADEX_CONFIG;
+  const settings = config.motion;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const mobileHero = matchMedia('(max-width: 720px)');
+  const compactNav = matchMedia('(max-width: 1024px)');
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  const by = (selector, scope = document) => scope.querySelector(selector);
+  const all = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+  const header = by('#header');
+  const menu = by('.menu-toggle');
+  const nav = by('#site-nav');
+  const hero = by('.hero');
+  const heroStage = by('.hero-stage');
+  const heroSummary = by('.hero-summary');
+  const heroMedia = by('.hero-media');
+  const heroVideo = by('#hero-video');
+  const desktopPoster = heroVideo.getAttribute('poster');
+  const videoToggle = by('#video-toggle');
+  const languageBar = by('.languages');
+  const localeButtons = all('[data-lang]', languageBar);
+  const review = window.TRADEX_REVIEW || null;
+  const cursor = by('.cursor-light');
+  const count = by('#compound-count');
+  const scenes = new Map();
+  let lang = 'en';
+  let areaFormat = new Intl.NumberFormat('en-GB');
+  let frame = 0;
+  let pointerFrame = 0;
+  let mouseX = 0, mouseY = 0, lightX = 0, lightY = 0;
+  let videoPath = '';
+  let videoRequested = false;
+  let videoBlocked = false;
+  let videoPausedByVisitor = false;
+  let activeProfile = null;
+  let ignoreProfileFocus = false;
+  let directEntry = null;
+  let currentNav = '';
+  let lastArea = 100000;
+  let sceneGeometry = [];
+  let summaryShift = 0;
+  let viewHeight = 0;
+  function setMenu(open) {
+    header.classList.toggle('menu-open', open);
+    menu.setAttribute('aria-expanded', String(open));
+  }
+
+  function startIntro() {
+    const intro = document.querySelector('.intro');
+    if (reduceMotion.matches || location.hash || scrollY > 20) {
+      intro.remove();
+      return;
+    }
+
+    intro.style.setProperty('--gate-duration', `${settings.introOpenMs}ms`);
+    intro.hidden = false;
+
+    const start = setTimeout(() => intro.classList.add('is-opening'), settings.introHoldMs);
+    const timeout = setTimeout(finish, settings.introHoldMs + settings.introOpenMs + 100);
+    function finish() {
+      clearTimeout(start);
+      clearTimeout(timeout);
+      intro.remove();
+      schedule();
+      document.removeEventListener('keydown', finish);
+      document.removeEventListener('pointerdown', finish);
+      reduceMotion.removeEventListener('change', finish);
+    }
+    intro.querySelector('.gate-right').addEventListener('animationend', (event) => {
+      if (event.animationName === 'gate-right') finish();
+    });
+    document.addEventListener('keydown', finish, { once: true });
+    document.addEventListener('pointerdown', finish, { once: true });
+    reduceMotion.addEventListener('change', finish, { once: true });
+  }
+
+  function installHeroSources() {
+    const { enabled, mobile, mp4, mobilePoster } = config.media.hero;
+    const compact = mobileHero.matches;
+    const poster = compact && mobilePoster ? mobilePoster : desktopPoster;
+    if (heroVideo.getAttribute('poster') !== poster) heroVideo.setAttribute('poster', poster);
+    const path = compact && mobile ? mobile : mp4;
+    if (!path || path === videoPath || reduceMotion.matches || !enabled) return;
+
+    const previousTime = heroVideo.currentTime;
+    videoPath = path;
+    videoRequested = false;
+    videoBlocked = false;
+    heroVideo.muted = true;
+    heroVideo.toggleAttribute('data-landscape', path === mp4);
+    if (previousTime > 0) {
+      heroVideo.addEventListener('loadedmetadata', () => {
+        if (videoPath === path && Number.isFinite(heroVideo.duration) && heroVideo.duration > 0) {
+          heroVideo.currentTime = previousTime % heroVideo.duration;
+        }
+      }, { once:true });
+    }
+    heroVideo.setAttribute('src', path);
+  }
+
+  function updateVideoControl() {
+    videoToggle.textContent = videoPausedByVisitor || videoBlocked
+      ? (lang === 'de' ? 'Video abspielen' : 'Play video')
+      : (lang === 'de' ? 'Video pausieren' : 'Pause video');
+  }
+
+  function updatePlayback(mediaVisible) {
+    const shouldPlay = Boolean(videoPath) && mediaVisible && !document.hidden && !videoPausedByVisitor && !reduceMotion.matches;
+    if (shouldPlay === videoRequested || (shouldPlay && videoBlocked)) return;
+    videoRequested = shouldPlay;
+    if (!shouldPlay) {
+      heroVideo.pause();
+      return;
+    }
+    const requestedPath = videoPath;
+    heroVideo.play().catch(error => {
+      if (videoPath !== requestedPath || !videoRequested || error.name === 'AbortError') return;
+      videoRequested = false;
+      videoBlocked = true;
+      updateVideoControl();
+      schedule();
+    });
+  }
+
+
+  function installOptionalContent() {
+    all('[data-url]').forEach(link => { link.href = config.urls[link.dataset.url]; });
+    if (config.urls.legalNotice) {
+      const notice = by('#legal-notice');
+      notice.href = config.urls.legalNotice;
+      notice.hidden = false;
+      by('#legal-pending').hidden = true;
+    }
+    const coming = by('#coming');
+    if (coming && !config.showComingIn2027 && !review?.showComingIn2027) {
+      coming.remove();
+      by('[data-coming-link]')?.remove();
+    } else if (coming) {
+      const link = by('[data-after-purchasing]');
+      link.href = '#coming';
+      const label = by('span', link);
+      label.textContent = 'Coming in 2027';
+      label.dataset.de = 'Geplant für 2027';
+    }
+
+    const compoundPhoto = by('#compound-photo');
+    const compoundPath = config.media.compound || review?.compoundImage;
+    if (compoundPath) {
+      compoundPhoto.src = compoundPath;
+      compoundPhoto.alt = config.media.compound ? 'TRADEX. vehicle logistics compound' : 'Illustrative aerial view of a vehicle logistics yard';
+      compoundPhoto.dataset.deAlt = config.media.compound ? 'TRADEX. Fahrzeuglogistikstandort' : 'Illustrative Luftaufnahme eines Fahrzeuglogistikstandorts';
+      compoundPhoto.hidden = false;
+    }
+
+  }
+
+  function updateLocations() {
+    for (const location of all('[data-location]')) {
+      const code = location.dataset.location;
+      const address = by('address', location);
+      const lines = config.locations[code];
+      const content = lines.length ? lines : review?.locations[code]?.[lang];
+      address.replaceChildren();
+      address.hidden = !content?.length;
+      if (address.hidden) continue;
+      for (const line of content) {
+        const row = document.createElement('div');
+        row.textContent = line;
+        address.append(row);
+      }
+    }
+  }
+
+  const clamp = value => Math.min(1, Math.max(0, value));
+  const ramp = (value, start, end) => clamp((value - start) / (end - start));
+  const smooth = value => value * value * (3 - 2 * value);
+  const amountAt = (progress, range) => range[0] === range[1]
+    ? Number(progress >= range[0]) : smooth(ramp(progress, ...range));
+
+  const heroParts = all(':scope > p, :scope > .action-row', heroSummary);
+  const portalStack = by('.portal-stack');
+  const portalFragments = all('.portal-fragment', portalStack);
+  const portalSteps = all('.purchase-step');
+
+  function setReveal(element, value, prefix = 'stage') {
+    element.style.setProperty(`--${prefix}-opacity`, value.toFixed(3));
+    element.style.setProperty(`--${prefix}-y`, `${(9 * (1 - value)).toFixed(2)}px`);
+  }
+
+  function revealInFlow(element, start = .92, end = .72) {
+    if (reduceMotion.matches || element.contains(document.activeElement)) return 1;
+    const distance = viewHeight * start - element.getBoundingClientRect().top;
+    return smooth(ramp(distance, 0, viewHeight * (start - end)));
+  }
+
+  function collectScenes() {
+    const ratios = {
+      top: () => mobileHero.matches ? settings.heroTravelMobile : settings.heroTravelDesktop,
+      ecosystem: () => settings.ecosystemTravel,
+      compound: () => settings.compoundTravel,
+      dealers: () => settings.audienceTravel,
+      purchasing: () => settings.purchasingTravel,
+      coming: () => settings.futureTravel,
+    };
+    for (const element of all('[data-progress]')) {
+      const stage = by('.motion-stage', element);
+      const steps = all('[data-step]', element);
+      scenes.set(element.id, {
+        element, stage, ratio: ratios[element.id], steps,
+        arcs: all('.orbit-active', element),
+        points: all('.orbit-point', element),
+        orbit: by('.orbit-turn', element),
+        titles: all('.eco-service .service-title', element),
+        descriptions: all('.eco-service > p', element),
+      });
+    }
+  }
+
+  function arrangePortal() {
+    const compact = mobileHero.matches;
+    portalFragments.forEach((fragment, index) => {
+      const target = compact ? portalSteps[index] : portalStack;
+      if (fragment.parentNode !== target) target.append(fragment);
+    });
+    by('.portal-composition').hidden = compact;
+  }
+
+  function measureMotion() {
+    viewHeight = window.innerHeight;
+    const motion = !reduceMotion.matches;
+    root.classList.toggle('motion', motion);
+    arrangePortal();
+    summaryShift = mobileHero.matches ? Math.min(heroSummary.offsetHeight * .74, viewHeight * .31) : viewHeight * .13;
+    for (const scene of scenes.values()) {
+      const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580);
+      scene.element.classList.toggle('is-pinned', Boolean(canPin));
+      const height = scene.stage?.offsetHeight || 0;
+      scene.inset = canPin ? (parseFloat(getComputedStyle(scene.stage).top) || 0) : 0;
+      const fits = canPin && height + scene.inset <= viewHeight + 1;
+      scene.reveal = fits ? Math.round(viewHeight * scene.ratio()) : 0;
+      // A compact stage needs a shorter hold so its scroll space does not read as padding.
+      const holdDistance = scene.inset
+        ? Math.min(160, Math.max(110, viewHeight * settings.futureHoldRatio))
+        : Math.min(270, Math.max(150, viewHeight * settings.holdRatio));
+      const hold = fits ? Math.round(holdDistance) : 0;
+      scene.travel = scene.reveal + hold;
+      if (!fits) scene.element.classList.remove('is-pinned');
+      scene.element.style.setProperty('--scene-height', `${height}px`);
+      scene.element.style.setProperty('--travel', `${scene.travel}px`);
+    }
+    sceneGeometry = [...scenes.values()].map(scene => {
+      const bounds = scene.element.getBoundingClientRect();
+      const top = bounds.top + scrollY;
+      return { ...scene, top, pinStart: top - scene.inset, height: bounds.height };
+    });
+    installHeroSources();
+    schedule();
+  }
+
+  function updateHero(progress, pinned, y, top, bottom) {
+    const departure = pinned ? smooth(ramp(progress, 0, settings.heroClearAt)) : 0;
+    const headline = pinned ? smooth(ramp(progress, .045, settings.heroClearAt)) : 1;
+    heroStage.style.setProperty('--media-clip', `${(44 * departure).toFixed(2)}%`);
+    heroStage.style.setProperty('--media-y', `${(-62 * departure).toFixed(2)}%`);
+    heroStage.style.setProperty('--headline-y', `${(summaryShift * (1 - headline)).toFixed(2)}px`);
+    heroParts.forEach((part, index) => {
+      const value = pinned ? amountAt(progress, settings.heroStages[index]) : revealInFlow(part);
+      setReveal(part, value);
+      if (part.classList.contains('action-row')) part.inert = value < .95 && !part.contains(document.activeElement);
+    });
+    const mediaAway = departure * 1.06 >= 1 || bottom <= y || top >= y + viewHeight;
+    heroMedia.classList.toggle('is-away', mediaAway);
+    videoToggle.hidden = !videoPath || !heroVideo.videoWidth || reduceMotion.matches || mediaAway;
+    updatePlayback(!mediaAway);
+    header.classList.toggle('is-solid', y > 22);
+  }
+
+  function updateEcosystem(scene, progress, isPinned) {
+    const windows = settings.ecosystemStages;
+    const phases = scene.titles.map((heading, index) => ({
+      title: isPinned ? amountAt(progress, windows[index * 2]) : revealInFlow(heading),
+      description: isPinned ? amountAt(progress, windows[index * 2 + 1])
+        : revealInFlow(scene.descriptions[index], .82, .62),
+    }));
+    let active = -1;
+    phases.forEach(({title, description}, index) => {
+      if (title > .15) active = index;
+      setReveal(scene.titles[index], title);
+      setReveal(scene.descriptions[index], description);
+      const draw = title * .22 + description * .78;
+      scene.arcs[index].style.setProperty('--arc', (1 - draw).toFixed(3));
+      scene.points[index].toggleAttribute('data-reached', title > .15);
+    });
+    scene.points.forEach((point, index) => {
+      point.toggleAttribute('data-current', index === active && !reduceMotion.matches);
+    });
+    const turns = isPinned
+      ? settings.ecosystemTurns.reduce((n, window) => n + amountAt(progress, window), 0)
+      : phases.reduce((n, phase) => n + phase.description, 0);
+    const angle = reduceMotion.matches ? 0 : turns * settings.orbitDegrees;
+    scene.orbit.style.setProperty('--orbit-angle', `${angle.toFixed(2)}deg`);
+  }
+
+  function setNumber(value) {
+    if (lastArea === value) return;
+    lastArea = value;
+    count.textContent = areaFormat.format(value);
+  }
+
+  function updateCompoundCount(scene, progress, complete) {
+    if (complete || reduceMotion.matches) {
+      setNumber(100000);
+      return;
+    }
+    const amount = scene.reveal ? amountAt(progress, settings.compoundCountStage)
+      : revealInFlow(scene.steps[0], .86, .61);
+    setNumber(81000 + Math.round(19000 * amount));
+  }
+
+  function goToSection(destination, focus = false) {
+    const scene = sceneGeometry.find(item => item.element === destination);
+    const complete = destination.id === 'compound' || destination.id === 'coming';
+    const preview = destination.id === 'purchasing';
+    const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
+    const top = scene?.top ?? destination.getBoundingClientRect().top + scrollY;
+    const entryProgress = complete ? 1 : destination.id === 'ecosystem' ? settings.ecosystemStages[1][1] : 0;
+    const y = scene?.reveal ? Math.ceil(scene.pinStart + scene.reveal * entryProgress)
+      : destination === hero ? 0 : Math.max(0, top - padding);
+    directEntry = complete || preview ? {id: destination.id, y, complete} : null;
+    if (focus) {
+      destination.setAttribute('tabindex', '-1');
+      destination.focus({ preventScroll: true });
+    }
+    window.scrollTo({top:y, behavior:'instant'});
+    schedule();
+  }
+
+  function restoreSectionFromHash() {
+    const destination = document.getElementById(location.hash.slice(1));
+    if (destination) goToSection(destination);
+    else {
+      directEntry = null;
+      schedule();
+    }
+  }
+
+  function updateStages(scene, progress, isPinned, windows, entry) {
+    let active = 0;
+    const amounts = windows.map((range, index) => {
+      if (entry?.complete || (entry && index === 0)) return 1;
+      return isPinned ? amountAt(progress, range) : revealInFlow(scene.steps[index]);
+    });
+    if (!reduceMotion.matches) {
+      for (let i = 0; i < amounts.length; i += 1) {
+        if (amounts[i] > .15) active = i;
+      }
+    }
+    scene.steps.forEach((step, index) => {
+      const value = amounts[index];
+      setReveal(step, value, 'step');
+      if (scene.element.id === 'purchasing') {
+        const selected = index === active;
+        const color = !isPinned || index <= active
+          ? selected ? '#00748d' : '#326577' : '#152732';
+        step.style.setProperty('--stage-accent', color);
+        step.toggleAttribute('data-current', selected);
+        const fragment = portalFragments[index];
+        const inStack = portalStack.contains(fragment);
+        fragment.toggleAttribute('data-portal-current', selected);
+        setReveal(fragment, inStack ? value : 1);
+      }
+    });
+  }
+
+  function render() {
+    frame = 0;
+    const y = scrollY;
+    let active = '';
+    const windows = {
+      compound: settings.compoundStages,
+      dealers: settings.audienceStages,
+      purchasing: settings.purchasingStages,
+      coming: settings.futureStages,
+    };
+    for (const scene of sceneGeometry) {
+      const id = scene.element.id;
+      const pinned = Boolean(scene.travel);
+      const bottom = scene.top + scene.height;
+      if (directEntry?.id === id && (y < directEntry.y - (pinned ? 2 : 24) || bottom <= y)) directEntry = null;
+      const entry = directEntry?.id === id ? directEntry : null;
+      const progress = clamp(pinned ? (y - scene.pinStart) / scene.reveal
+        : (y + viewHeight * .2 - scene.top) / Math.max(viewHeight * .28, scene.height - viewHeight * .67));
+      const rail = entry?.complete || reduceMotion.matches ? 1 : progress;
+      scene.element.style.setProperty('--section-progress', rail.toFixed(3));
+      if (scene.top <= y + viewHeight * .29) active = id;
+      if (id === 'top') updateHero(progress, pinned, y, scene.top, bottom);
+      else if (id === 'ecosystem') updateEcosystem(scene, progress, pinned);
+      else if (windows[id]) updateStages(scene, progress, pinned, windows[id], entry);
+      if (id === 'compound') updateCompoundCount(scene, progress, entry?.complete);
+    }
+    if (active !== currentNav) {
+      currentNav = active;
+      all('a[href^="#"]', nav).forEach(link => {
+        if (link.hash === `#${active}`) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    }
+  }
+
+  function schedule() {
+    if (!frame) frame = requestAnimationFrame(render);
+  }
+
+  const flags = {
+    de: '<path fill="#ffce00" d="M0 0h24v15H0z"/><path fill="#d00" d="M0 0h24v10H0z"/><path d="M0 0h24v5H0z"/>',
+    en: '<path fill="#15316a" d="M0 0h24v15H0z"/><path stroke="#fff" stroke-width="2.6" d="m0 0 24 15m0-15L0 15"/><path stroke="#ce2639" d="m0 0 24 15m0-15L0 15"/><path stroke="#fff" stroke-width="4.2" d="M0 7.5h24M12 0v15"/><path stroke="#ce2639" stroke-width="2.2" d="M0 7.5h24M12 0v15"/>',
+    hr: '<path fill="#1547ac" d="M0 0h24v15H0z"/><path fill="#fff" d="M0 0h24v10H0z"/><path fill="#dc2841" d="M0 0h24v5H0z"/><path fill="#d8293e" d="M10 5h4v5h-4z"/><path fill="#fff" d="M10 5h1v1h-1zm2 0h1v1h-1zm-1 1h1v1h-1zm2 0h1v1h-1zm-3 1h1v1h-1zm2 0h1v1h-1z"/>',
+    it: '<path fill="#d72841" d="M0 0h24v15H0z"/><path fill="#fff" d="M0 0h16v15H0z"/><path fill="#009246" d="M0 0h8v15H0z"/>',
+    da: '<path fill="#c91f37" d="M0 0h24v15H0z"/><path stroke="#fff" stroke-width="2" d="M0 7.5h24M8 0v15"/>',
+    es: '<path fill="#ad1628" d="M0 0h24v15H0z"/><path fill="#ffcc43" d="M0 4h24v7H0z"/><path fill="#ad1628" d="M6 6h3v3H6z"/>',
+    pt: '<path fill="#da273d" d="M0 0h24v15H0z"/><path fill="#087f45" d="M0 0h10v15H0z"/><circle fill="#ffce2b" cx="10" cy="7.5" r="2.7"/><path fill="#fff" d="M9 6h2v3H9z"/>',
+    fr: '<path fill="#e3344b" d="M0 0h24v15H0z"/><path fill="#fff" d="M0 0h16v15H0z"/><path fill="#214d9f" d="M0 0h8v15H0z"/>',
+    ro: '<path fill="#dc2c3f" d="M0 0h24v15H0z"/><path fill="#f7d047" d="M0 0h16v15H0z"/><path fill="#214d9f" d="M0 0h8v15H0z"/>',
+    sq: '<path fill="#d22334" d="M0 0h24v15H0z"/><path d="m12 4 1 2 4-2-2 4 1 2-3-1-1 3-1-3-3 1 1-2-2-4 4 2z"/>',
+    tr: '<path fill="#d92335" d="M0 0h24v15H0z"/><circle fill="#fff" cx="9" cy="7.5" r="4"/><circle fill="#d92335" cx="10.6" cy="7.5" r="3.2"/><path fill="#fff" d="m15 5.5.6 1.4 1.6.1-1.2 1 .4 1.5-1.4-.8-1.3.8.3-1.5-1.2-1 1.6-.1z"/>',
+  };
+  const languages = {
+    en: ['English','Englisch'], de:['German','Deutsch'], hr:['Croatian','Kroatisch'],
+    it:['Italian','Italienisch'], da:['Danish','Dänisch'], es:['Spanish','Spanisch'],
+    pt:['Portuguese','Portugiesisch'], fr:['French','Französisch'], ro:['Romanian','Rumänisch'],
+    sq:['Albanian','Albanisch'], tr:['Turkish','Türkisch'],
+  };
+
+  function localiseInline(element, de) {
+    element.dataset.en = element.textContent;
+    element.dataset.de = de || element.textContent;
+  }
+
+  function appendProfileText(panel, field, className) {
+    if (!field?.en && !field?.de) return;
+    const p = document.createElement('p');
+    p.className = className;
+    p.textContent = field.en || field.de;
+    localiseInline(p, field.de);
+    panel.append(p);
+  }
+
+  function buildProfiles() {
+    for (const person of all('[data-person]')) {
+      const id = person.dataset.person;
+      const datum = { ...review?.profiles[id], ...config.approvedProfiles[id] };
+      if (!Object.keys(datum).length) continue;
+      const trigger = by('.portrait-trigger', person);
+      const panel = by('.inline-profile', person);
+      const name = by('.person-meta h3', person);
+      const role = by('.person-meta p', person);
+      appendProfileText(panel, { en: name.textContent, de: name.textContent }, 'profile-name');
+      appendProfileText(panel, { en: role.textContent, de: role.dataset.de }, 'profile-role');
+      appendProfileText(panel, datum.bio, 'bio');
+      appendProfileText(panel, datum.focus, 'focus');
+      if (datum.languages?.length) {
+        const list = document.createElement('ul');
+        list.className = 'language-list';
+        list.setAttribute('aria-label', 'Languages');
+        list.dataset.deLabel = 'Sprachen';
+        for (const code of datum.languages) {
+          if (!languages[code]) continue;
+          const li = document.createElement('li');
+          const label = document.createElement('span');
+          label.textContent = languages[code][0];
+          localiseInline(label, languages[code][1]);
+          if (flags[code]) {
+            const flag = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            flag.setAttribute('viewBox', '0 0 24 15');
+            flag.setAttribute('aria-hidden', 'true');
+            flag.innerHTML = flags[code];
+            li.append(flag);
+          }
+          li.append(label);
+          list.append(li);
+        }
+        panel.append(list);
+      }
+      const contacts = document.createElement('div');
+      contacts.className = 'profile-links';
+      for (const [value, scheme] of [[datum.email, 'mailto:'], [datum.phone, 'tel:']]) {
+        if (!value) continue;
+        const link = document.createElement('a');
+        link.textContent = value;
+        link.href = scheme + (scheme === 'tel:' ? value.replace(/[^+\d]/g, '') : value);
+        contacts.append(link);
+      }
+      if (contacts.childElementCount) panel.append(contacts);
+      trigger.hidden = false;
+      const record = { person, trigger, panel, pinned: false };
+      person.addEventListener('pointerenter', event => {
+        if (event.pointerType === 'mouse' && finePointer.matches) openProfile(record, false);
+      });
+      person.addEventListener('pointerleave', () => {
+        if (activeProfile === record && !record.pinned && !panel.contains(document.activeElement)) closeProfile();
+      });
+      trigger.addEventListener('focus', () => {
+        if (!ignoreProfileFocus && trigger.matches(':focus-visible')) openProfile(record, false);
+      });
+      trigger.addEventListener('click', () => {
+        if (activeProfile === record && record.pinned) closeProfile(true);
+        else openProfile(record, true);
+      });
+      person.addEventListener('focusout', event => {
+        if (activeProfile === record && !person.contains(event.relatedTarget) && !person.matches(':hover')) closeProfile();
+      });
+      panel.hidden = false;
+      panel.inert = true;
+      person.addEventListener('click', event => {
+        if (activeProfile === record && record.pinned && !event.target.closest('a,button')) closeProfile();
+      });
+    }
+  }
+
+  function openProfile(record, pinned) {
+    if (activeProfile !== record) {
+      if (!pinned && activeProfile?.panel.contains(document.activeElement)) return;
+      closeProfile();
+      activeProfile = record;
+    }
+    record.pinned ||= pinned;
+    record.panel.inert = false;
+    record.person.classList.add('is-expanded');
+    if (record.panel.scrollHeight > record.panel.clientHeight + 2) {
+      record.person.classList.add('uses-inline-profile');
+      measureMotion();
+    }
+    record.trigger.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeProfile(restoreFocus = false) {
+    if (!activeProfile) return;
+    const { panel, person, trigger } = activeProfile;
+    activeProfile.pinned = false;
+    activeProfile = null;
+    panel.inert = true;
+    person.classList.remove('is-expanded');
+    if (person.classList.contains('uses-inline-profile')) {
+      person.classList.remove('uses-inline-profile');
+      measureMotion();
+    }
+    trigger.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) {
+      ignoreProfileFocus = true;
+      trigger.focus({ preventScroll: true });
+      ignoreProfileFocus = false;
+    }
+  }
+
+  function translatePage(selected) {
+    lang = selected;
+    root.lang = lang;
+    areaFormat = new Intl.NumberFormat(lang === 'de' ? 'de-DE' : 'en-GB');
+    count.textContent = areaFormat.format(lastArea);
+    document.title = lang === 'de' ? 'TRADEX. | Europäischer Fahrzeughandel' : 'TRADEX. | European car trading';
+    for (const [suffix, property] of [['', ''], ['-label', 'aria-label'], ['-alt', 'alt']]) {
+      all(`[data-de${suffix}]`).forEach(element => {
+        const original = property ? element.getAttribute(property) : element.textContent;
+        const key = `data-en${suffix}`;
+        if (!element.hasAttribute(key)) element.setAttribute(key, original);
+        const next = element.getAttribute(`data-${lang}${suffix}`);
+        if (property) element.setAttribute(property, next);
+        else element.textContent = next;
+      });
+    }
+    all('[data-de-html]').forEach(element => {
+      if (!element.hasAttribute('data-en-html')) element.dataset.enHtml = element.innerHTML;
+      // The bilingual emphasis strings are authored in index.html.
+      element.innerHTML = lang === 'de' ? element.dataset.deHtml : element.dataset.enHtml;
+    });
+    for (const button of localeButtons) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
+    updateLocations();
+    updateVideoControl();
+    measureMotion();
+  }
+
+  function moveLight() {
+    pointerFrame = 0;
+    lightX += (mouseX - lightX) * .2;
+    lightY += (mouseY - lightY) * .2;
+    cursor.style.setProperty('--pointer-x', `${lightX - 180}px`);
+    cursor.style.setProperty('--pointer-y', `${lightY - 180}px`);
+    if (Math.abs(mouseX - lightX) + Math.abs(mouseY - lightY) > 1) pointerFrame = requestAnimationFrame(moveLight);
+  }
+
+  function resetLight() {
+    cursor.classList.remove('is-active');
+    if (pointerFrame) cancelAnimationFrame(pointerFrame);
+    pointerFrame = 0;
+  }
+
+  function installEntrances() {
+    if (!('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        observer.unobserve(entry.target);
+        if (reduceMotion.matches || (directEntry && entry.target.closest('section')?.id === directEntry.id)) continue;
+        const index = all('[data-enter]', entry.target.parentElement).indexOf(entry.target);
+        entry.target.animate([{opacity:.25,transform:'translateY(14px)'},{opacity:1,transform:'translateY(0)'}],
+          {duration:380,delay:(index % 4) * 42,easing:'ease-out',fill:'none'});
+      }
+    }, { threshold:.13 });
+    all('[data-enter]').forEach(node => observer.observe(node));
+  }
+
+  root.classList.add('js');
+  installOptionalContent();
+  collectScenes();
+  installHeroSources();
+  if ((!location.hash || location.hash === '#top') && scrollY < 20) updatePlayback(true);
+  startIntro();
+  buildProfiles();
+  installEntrances();
+  menu.hidden = false;
+  languageBar.hidden = false;
+
+  menu.addEventListener('click', () => setMenu(menu.getAttribute('aria-expanded') === 'false'));
+  document.addEventListener('click', event => {
+    const navLink = event.target.closest('a[href^="#"]');
+    if (!navLink?.hash || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const destination = document.getElementById(navLink.hash.slice(1));
+    if (!destination) return;
+    event.preventDefault();
+    setMenu(false);
+    if (location.hash !== navLink.hash) history.pushState(null, '', navLink.hash);
+    goToSection(destination, true);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (activeProfile) closeProfile(true);
+    else if (header.classList.contains('menu-open')) {
+      setMenu(false);
+      menu.focus();
+    }
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!header.contains(event.target)) setMenu(false);
+    if (activeProfile && !activeProfile.person.contains(event.target)) closeProfile();
+  });
+  document.addEventListener('pointermove', event => {
+    if (event.pointerType !== 'mouse' || !finePointer.matches || reduceMotion.matches) return;
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+    if (!cursor.classList.contains('is-active')) {
+      lightX = mouseX;
+      lightY = mouseY;
+      cursor.classList.add('is-active');
+    }
+    if (!pointerFrame) pointerFrame = requestAnimationFrame(moveLight);
+  }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', resetLight);
+  finePointer.addEventListener('change', resetLight);
+  compactNav.addEventListener('change', () => setMenu(false));
+
+  for (const button of localeButtons) {
+    button.addEventListener('click', () => {
+      if (button.dataset.lang === lang) return;
+      translatePage(button.dataset.lang);
+      try { localStorage.setItem('tradex-language', lang); } catch {}
+    });
+  }
+
+  videoToggle.addEventListener('click', () => {
+    if (videoBlocked) {
+      videoBlocked = false;
+      videoPausedByVisitor = false;
+      updatePlayback(true);
+    } else {
+      videoPausedByVisitor = !videoPausedByVisitor;
+      if (!videoPausedByVisitor) updatePlayback(true);
+    }
+    updateVideoControl();
+    schedule();
+  });
+  heroVideo.addEventListener('loadeddata', schedule);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) resetLight();
+    schedule();
+  });
+  window.addEventListener('hashchange', () => {
+    measureMotion();
+    restoreSectionFromHash();
+  });
+  window.addEventListener('pageshow', event => {
+    measureMotion();
+    if (!event.persisted && location.hash) restoreSectionFromHash();
+  });
+  window.addEventListener('scroll', schedule, { passive:true });
+  window.addEventListener('resize', measureMotion, { passive:true });
+  reduceMotion.addEventListener('change', () => { resetLight(); measureMotion(); });
+  if (document.fonts) document.fonts.ready.then(() => {
+    const wasAtEntry = directEntry && Math.abs(scrollY - directEntry.y) <= 24;
+    measureMotion();
+    if (wasAtEntry) restoreSectionFromHash();
+  });
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(measureMotion);
+    for (const scene of scenes.values()) if (scene.stage) observer.observe(scene.stage);
+  }
+
+  let savedLanguage = 'en';
+  try { savedLanguage = localStorage.getItem('tradex-language') === 'de' ? 'de' : 'en'; } catch {}
+  translatePage(savedLanguage);
+  if (location.hash) restoreSectionFromHash();
+})();

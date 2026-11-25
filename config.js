@@ -1,0 +1,43 @@
+window.TRADEX_CONFIG = {
+  motion: {
+    introHoldMs: 720,
+    introOpenMs: 880,
+    holdRatio: .28,
+    heroTravelDesktop: 1.4,
+    heroTravelMobile: 1.15,
+    heroClearAt: .32,
+    heroStages: [[.31,.42],[.52,.62],[.73,.83],[.91,1]],
+    ecosystemTravel: 1.38,
+    ecosystemStages: [[0,0],[.10,.17],[.25,.32],[.38,.45],[.52,.59],[.64,.71],[.77,.84],[.9,.97]],
+    ecosystemTurns: [[.14,.23],[.41,.50],[.67,.76],[.90,1]],
+    orbitDegrees: 30,
+    compoundTravel: .61,
+    compoundStages: [[.09,.22],[.43,.58],[.82,1]],
+    compoundCountStage: [.17,.43],
+    audienceTravel: .44,
+    audienceStages: [[0,0],[.55,1]],
+    purchasingTravel: .85,
+    purchasingStages: [[0,0],[.22,.33],[.54,.65],[.87,1]],
+    futureTravel: .21,
+    futureHoldRatio: .16,
+    futureStages: [[0,.27],[.53,1]],
+  },
+  urls: {
+    join: 'https://portal.tradexautos.com/customer/sign-up/?ref=carpeople',
+    login: 'https://portal.tradexautos.com/customer/login/',
+    legalNotice: '',
+  },
+  media: {
+    hero: {
+      enabled: true,
+      mobile: 'assets/video/hero-mobile.mp4',
+      mp4: 'assets/video/hero-desktop.mp4',
+      mobilePoster: 'assets/images/hero/hero-video-poster-mobile.webp',
+    },
+    compound: '',
+  },
+  locations: { de: [], at: [] },
+  showComingIn2027: false,
+  // Add only signed-off records: bio { en, de }, focus { en, de }, language codes, email and phone.
+  approvedProfiles: {},
+};
