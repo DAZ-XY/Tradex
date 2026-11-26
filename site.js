@@ -5,6 +5,7 @@
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobileHero = matchMedia('(max-width: 720px)');
   const compactNav = matchMedia('(max-width: 1024px)');
+  const fullScenes = matchMedia('(min-width: 921px) and (min-height: 700px)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const by = (selector, scope = document) => scope.querySelector(selector);
   const all = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -109,6 +110,7 @@
       compoundPhoto.src = config.media.compound;
       compoundPhoto.alt = 'TRADEX. vehicle logistics compound';
       compoundPhoto.dataset.deAlt = 'TRADEX. Fahrzeuglogistikstandort';
+      by('#compound-image-note').hidden = true;
     }
 
     for (const location of all('[data-location]')) {
@@ -133,10 +135,52 @@
   const portalStack = by('.portal-stack');
   const portalFragments = all('.portal-fragment', portalStack);
   const portalSteps = all('.purchase-step');
+  const deck = by('.audience-deck');
+  const spineGroup = by('.deck-spines', deck);
+  const spines = all('[data-spine]', deck);
+  let audienceOverride = null;
+  let lastAudience = -1;
+  let deckPinned = false;
+  const choreoWindows = { label:[0,.31], title:[.11,.54], lead:[.30,.78], detail:[.48,.98], photo:[0,.69] };
+
+  function chooseAudience(index, mode) {
+    if (!deckPinned) {
+      if (mode === 'tap') goToSection(by('#' + spines[index].getAttribute('aria-controls')), true);
+      return;
+    }
+    audienceOverride = { index, mode, y:scrollY };
+    schedule();
+  }
+
+  function installAudienceControls() {
+    spineGroup.hidden = false;
+    spines.forEach((button, index) => {
+      button.addEventListener('pointerenter', event => {
+        if (event.pointerType === 'mouse' && audienceOverride?.mode !== 'focus') chooseAudience(index, 'hover');
+      });
+      button.addEventListener('pointerleave', () => {
+        if (audienceOverride?.mode === 'hover' && audienceOverride.index === index) {
+          audienceOverride = null;
+          schedule();
+        }
+      });
+      button.addEventListener('focus', () => {
+        if (button.matches(':focus-visible')) chooseAudience(index, 'focus');
+      });
+      button.addEventListener('blur', () => {
+        if (audienceOverride?.mode === 'focus' && audienceOverride.index === index) {
+          audienceOverride = null;
+          schedule();
+        }
+      });
+      button.addEventListener('click', () => chooseAudience(index, 'tap'));
+    });
+  }
+
 
   function setReveal(element, value, prefix = 'stage') {
     element.style.setProperty(`--${prefix}-opacity`, value.toFixed(3));
-    element.style.setProperty(`--${prefix}-y`, `${(9 * (1 - value)).toFixed(2)}px`);
+    element.style.setProperty(`--${prefix}-y`, `${((prefix === 'choreo' ? 22 : prefix === 'piece' ? 19 : 9) * (1 - value)).toFixed(2)}px`);
   }
 
   function revealInFlow(element, start = .92, end = .72) {
@@ -148,23 +192,36 @@
   function collectScenes() {
     const ratios = {
       top: () => mobileHero.matches ? settings.heroTravelMobile : settings.heroTravelDesktop,
-      ecosystem: () => settings.ecosystemTravel,
-      compound: () => settings.compoundTravel,
       purchasing: () => settings.purchasingTravel,
+      ecosystem: () => settings.ecosystemTravel,
+      services: () => settings.serviceTravel,
+      'data-and-people': () => settings.studyTravel,
+      compound: () => settings.compoundTravel,
+      company: () => settings.companyTravel,
+      coming: () => settings.futureTravel,
     };
     for (const element of all('[data-progress]')) {
       const stage = by('.motion-stage', element);
       const steps = all('[data-step]', element);
-      const compact = element.id === 'dealers' || element.id === 'coming';
-      const earlyReveal = element.id === 'purchasing' || element.id === 'coming';
+      const future = element.id === 'coming';
+      const earlyReveal = element.id === 'purchasing';
+      const sequence = all('[data-sequence]', element);
+      const audiences = all('[data-audience]', element);
+      const orbit = by('.orbit-turn', element);
+      const orbitMap = orbit?.closest('.participant-map');
+      const study = all('[data-study]', element);
       scenes.set(element.id, {
-        element, stage, ratio: ratios[element.id], steps, compact, earlyReveal,
+        element, stage, ratio: ratios[element.id], steps, future, earlyReveal, sequence, orbit, study, audiences,
+        pieces: sequence.map(panel => all('[data-piece]', panel)),
+        audienceParts: audiences.map(panel => all('[data-piece]', panel)),
+        choreo: all('[data-choreo]', element),
+        lastRender: { y:NaN, audience:-1 },
+        orbitMotion: { angle:0, time:0 },
+        orbitMap,
+        arcs: orbit ? all('.orbit-active', orbit) : [],
+        points: orbit ? all('.orbit-point', element) : [],
+        photo: by('.photo-motion', element),
         heading: earlyReveal ? by('.section-head', element) : null,
-        arcs: all('.orbit-active', element),
-        points: all('.orbit-point', element),
-        orbit: by('.orbit-turn', element),
-        titles: all('.eco-service .service-title', element),
-        descriptions: all('.eco-service > p', element),
       });
     }
   }
@@ -175,7 +232,14 @@
       const target = compact ? portalSteps[index] : portalStack;
       if (fragment.parentNode !== target) target.append(fragment);
     });
-    by('.portal-composition').hidden = compact;
+    const figure = by('.portal-composition');
+    const caption = by('#portal-illustration-title');
+    if (compact && caption.parentNode !== portalSteps[0]) {
+      portalSteps[0].insertBefore(caption, portalFragments[0]);
+    } else if (!compact && caption.parentNode !== figure) {
+      figure.prepend(caption);
+    }
+    figure.hidden = compact;
   }
 
   function measureMotion() {
@@ -183,38 +247,26 @@
     const motion = !reduceMotion.matches;
     root.classList.toggle('motion', motion);
     arrangePortal();
-    const headerHeight = header.offsetHeight;
     summaryShift = mobileHero.matches ? Math.min(heroSummary.offsetHeight * .74, viewHeight * .31) : viewHeight * .13;
     for (const scene of scenes.values()) {
-      const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580);
+      const needsDesktop = scene.sequence.length || scene.orbit || scene.study.length
+        || scene.future || scene.element.id === 'compound';
+      const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580)
+        && (!needsDesktop || fullScenes.matches);
       scene.element.classList.toggle('is-pinned', Boolean(canPin));
-      const height = scene.stage?.offsetHeight || 0;
       scene.inset = 0;
-      if (scene.element.id === 'coming') {
-        const maxInset = viewHeight - height;
-        scene.inset = Math.max(headerHeight, Math.min(maxInset, headerHeight + Math.min(32, viewHeight * .035)));
-      } else if (scene.compact) {
-        scene.inset = Math.max(headerHeight, Math.floor((viewHeight - height + headerHeight) / 2));
-      }
-      const fits = canPin && height + scene.inset <= viewHeight + 1;
-      const revealDistance = scene.compact
-        ? Math.min(150, Math.max(90, viewHeight * settings.compactTravel))
-        : viewHeight * (scene.ratio?.() ?? 0);
-      scene.reveal = fits ? Math.round(revealDistance) : 0;
-      const holdDistance = scene.element.id === 'purchasing'
-        ? Math.min(240, Math.max(185, viewHeight * .235))
-        : scene.element.id === 'coming'
-        ? Math.min(280, Math.max(180, viewHeight * .28))
-        : scene.compact
-        ? Math.min(55, Math.max(30, viewHeight * .055))
-        : Math.min(270, Math.max(150, viewHeight * settings.holdRatio));
-      const hold = fits ? Math.round(holdDistance) : 0;
+      const height = scene.stage?.offsetHeight || 0;
+      const fits = canPin && height <= viewHeight + 1 && Boolean(scene.ratio);
+      scene.reveal = fits ? Math.round(viewHeight * scene.ratio()) : 0;
+      const holdRatio = scene.future ? .25 : scene.earlyReveal ? .26 : .22;
+      const hold = fits ? Math.round(Math.min(270, viewHeight * holdRatio)) : 0;
       scene.travel = scene.reveal + hold;
       if (!fits) scene.element.classList.remove('is-pinned');
-      scene.element.style.setProperty('--pin-inset', `${scene.inset}px`);
+      scene.element.style.setProperty('--pin-inset', '0px');
       scene.element.style.setProperty('--scene-height', `${height}px`);
       scene.element.style.setProperty('--travel', `${scene.travel}px`);
       scene.stageHeight = height;
+      scene.lastRender.y = NaN;
     }
     sceneGeometry = [...scenes.values()].map(scene => {
       const bounds = scene.element.getBoundingClientRect();
@@ -252,30 +304,121 @@
     header.classList.toggle('is-solid', y > 22);
   }
 
-  function updateEcosystem(scene, progress, isPinned) {
-    const windows = settings.ecosystemStages;
-    const phases = scene.titles.map((heading, index) => ({
-      title: isPinned ? amountAt(progress, windows[index * 2]) : revealInFlow(heading),
-      description: isPinned ? amountAt(progress, windows[index * 2 + 1])
-        : revealInFlow(scene.descriptions[index], .82, .62),
-    }));
-    let active = -1;
-    phases.forEach(({title, description}, index) => {
-      if (title > .15) active = index;
-      setReveal(scene.titles[index], title);
-      setReveal(scene.descriptions[index], description);
-      const draw = title * .22 + description * .78;
-      scene.arcs[index].style.setProperty('--arc', (1 - draw).toFixed(3));
-      scene.points[index].toggleAttribute('data-reached', title > .15);
+  function updateEcosystem(scene, progress, y, time) {
+    const staticOrbit = reduceMotion.matches;
+    if (!scene.reveal && !staticOrbit) {
+      const map = scene.orbitMap.getBoundingClientRect();
+      const center = map.top + map.height / 2;
+      progress = 1 - ramp(center, viewHeight * .23, viewHeight * .85);
+    }
+    const goal = staticOrbit ? 0 : smooth(progress) * settings.orbitDegrees;
+    const inView = scene.top < y + viewHeight && scene.top + scene.height > y;
+    const orbit = scene.orbitMotion;
+    const delta = goal - orbit.angle;
+    // Keep R19's progress-driven arcs, with the participant labels on a separate,
+    // counter-rotating HTML layer that stays accessible in either language.
+    const elapsed = orbit.time ? Math.min(time - orbit.time, 80) : 16.67;
+    const angle = inView && !staticOrbit && Math.abs(delta) > .04
+      ? orbit.angle + delta * (1 - Math.exp(-elapsed / 80)) : goal;
+    if (angle !== goal) schedule();
+    orbit.angle = angle;
+    orbit.time = angle === goal ? 0 : time;
+    scene.orbit.style.setProperty('--orbit-angle', `${angle.toFixed(3)}deg`);
+    scene.element.style.setProperty('--orbit-angle', `${angle.toFixed(3)}deg`);
+    scene.arcs.forEach((arc,index) => {
+      const draw = staticOrbit ? 1 : amountAt(progress, settings.ecosystemStages[index]);
+      arc.style.setProperty('--arc', (1 - draw).toFixed(3));
+      scene.points[index]?.toggleAttribute('data-reached', draw > .2);
+      scene.points[index]?.toggleAttribute('data-current', draw > .24 && draw < .95 && !staticOrbit);
     });
-    scene.points.forEach((point, index) => {
-      point.toggleAttribute('data-current', index === active && !reduceMotion.matches);
+  }
+
+  function updateChoreography(scene, y, pinned) {
+    const arrival = ramp(y, scene.top - viewHeight * .68, scene.pinStart + viewHeight * .1);
+    scene.choreo.forEach(element => {
+      const kind = element.dataset.choreo;
+      const value = scene.element === hero && y < 24 ? 1
+        : reduceMotion.matches ? 1
+        : pinned ? amountAt(arrival, choreoWindows[kind])
+        : revealInFlow(element, .98, kind === 'photo' ? .73 : .81);
+      setReveal(element, value, 'choreo');
     });
-    const turns = isPinned
-      ? settings.ecosystemTurns.reduce((n, window) => n + amountAt(progress, window), 0)
-      : phases.reduce((n, phase) => n + phase.description, 0);
-    const angle = reduceMotion.matches ? 0 : turns * settings.orbitDegrees;
-    scene.orbit.style.setProperty('--orbit-angle', `${angle.toFixed(2)}deg`);
+  }
+
+  function updateSequence(scene, progress, pinned) {
+    const phase = Math.min(progress * scene.sequence.length, scene.sequence.length - .0001);
+    const current = Math.floor(phase);
+    const within = phase - current;
+    scene.sequence.forEach((panel, index) => {
+      const active = index === current;
+      const distance = phase - index;
+      const entry = index === 0 ? 1 : smooth(ramp(within, 0, .27));
+      const exit = index === scene.sequence.length - 1 ? 1 : 1 - .21 * smooth(ramp(within,.86,1));
+      panel.toggleAttribute('data-active', pinned && active);
+      panel.toggleAttribute('data-tail', pinned && !active && distance >= 1 && distance < 1.15);
+      if (pinned && !active) panel.setAttribute('aria-hidden', 'true');
+      else panel.removeAttribute('aria-hidden');
+      setReveal(panel, pinned ? active ? (.84 + entry * .16) * exit : .18 * (1 - ramp(distance,1,1.15)) : 1, 'sequence');
+      if (pinned && active) {
+        panel.style.setProperty('--phase-y', `${(19 * (1 - entry)).toFixed(2)}px`);
+        panel.style.setProperty('--phase-scale', (1.025 - entry * .025).toFixed(3));
+      }
+      if (pinned && !active) return;
+      scene.pieces[index].forEach((piece, i) => {
+        const value = pinned
+          ? .65 + .35 * smooth(ramp(within, i * .069, .27 + i * .069))
+          : revealInFlow(piece, .98, .80);
+        setReveal(piece, value, 'piece');
+      });
+    });
+  }
+
+  function updateAudienceDeck(scene, progress, pinned, y) {
+    if (audienceOverride && Math.abs(y - audienceOverride.y) > 12) audienceOverride = null;
+    const lead = settings.audienceStart;
+    const phase = Math.min(ramp(progress, lead, 1) * scene.audiences.length, scene.audiences.length - .0001);
+    const index = audienceOverride?.index ?? Math.floor(phase);
+    const open = pinned && (progress >= lead * .55 || Boolean(audienceOverride));
+    deckPinned = pinned;
+    scene.element.classList.toggle('deck-open', open);
+    const amount = open ? audienceOverride ? 1 : smooth(ramp(progress, lead * .55, lead)) : 0;
+    scene.element.style.setProperty('--deck-in', amount.toFixed(3));
+    const foreground = open ? index : -1;
+    if (lastAudience !== foreground || scene.lastRender.audience !== foreground) {
+      spines.forEach((button, i) => button.setAttribute('aria-pressed', String(foreground === i)));
+      lastAudience = foreground;
+      scene.lastRender.audience = foreground;
+    }
+
+    scene.audiences.forEach((panel, i) => {
+      const selected = i === foreground;
+      const depth = ((i - index + scene.audiences.length) % scene.audiences.length);
+      panel.toggleAttribute('data-foreground', selected);
+      panel.style.setProperty('--card-depth', depth);
+      if (pinned && !selected) panel.setAttribute('aria-hidden','true');
+      else panel.removeAttribute('aria-hidden');
+      if (pinned && !selected) return;
+      scene.audienceParts[i].forEach((piece, order) => {
+        const value = pinned
+          ? audienceOverride ? 1 : .68 + .32 * smooth(ramp(phase % 1, order * .1, .36 + order * .1))
+          : revealInFlow(piece, .98, .80);
+        setReveal(piece, value, 'piece');
+      });
+    });
+  }
+
+  function updatePhoto(scene, progress, maxScale) {
+    const value = reduceMotion.matches ? 0 : smooth(progress);
+    scene.photo.style.setProperty('--photo-scale', (1 + value * (maxScale - 1)).toFixed(4));
+    scene.photo.style.setProperty('--photo-y', `${(-12 * value).toFixed(2)}px`);
+  }
+
+  function updateStudy(scene, progress, pinned) {
+    scene.study.forEach((item,index) => {
+      const value = pinned ? amountAt(progress, settings.studyStages[index]) : revealInFlow(item, .98, .8);
+      setReveal(item,value,'study');
+    });
+    updatePhoto(scene,progress,1.075);
   }
 
   function setNumber(value) {
@@ -290,26 +433,30 @@
       return;
     }
     const amount = scene.reveal ? amountAt(progress, settings.compoundCountStage)
-      : revealInFlow(scene.steps[0], .86, .61);
+      : revealInFlow(scene.steps[1], .88, .66);
     setNumber(81000 + Math.round(19000 * amount));
   }
 
   function goToSection(destination, focus = false) {
-    const scene = sceneGeometry.find(item => item.element === destination);
-    const complete = destination.id === 'compound' || scene?.compact;
+    const audience = destination.matches('[data-audience], .audience-deck');
+    const scene = sceneGeometry.find(item => item.element === destination || (audience && item.element.id === 'ecosystem'));
+    const sequenceIndex = audience && scene?.reveal ? scene.audiences.indexOf(destination) : -1;
     const preview = destination.id === 'purchasing';
     const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
-    const top = scene?.top ?? destination.getBoundingClientRect().top + scrollY;
-    const entryProgress = complete ? 1 : destination.id === 'ecosystem' ? settings.ecosystemStages[1][1] : 0;
-    const entryDistance = preview && scene?.reveal ? scene.reveal * .05 : (scene?.reveal || 0) * entryProgress;
+    const top = audience ? destination.getBoundingClientRect().top + scrollY
+      : scene?.top ?? destination.getBoundingClientRect().top + scrollY;
+    const lead = settings.audienceStart;
+    const entryProgress = sequenceIndex >= 0 ? lead + (1 - lead) * (sequenceIndex + .45) / scene.audiences.length
+      : audience ? lead + .037 : destination.id === 'coming' ? .45 : 0;
+    const entryDistance = preview && scene?.reveal ? scene.reveal * .06 : (scene?.reveal || 0) * entryProgress;
     const y = scene?.reveal ? Math.ceil(scene.pinStart + entryDistance)
       : destination === hero ? 0 : Math.max(0, top - padding);
-    // Pinned compact scenes reach their final frame at the anchor itself.
-    directEntry = (complete && !(scene?.compact && scene.reveal)) || (preview && !scene?.reveal)
-      ? {id: destination.id, y, complete}
-      : null;
+    audienceOverride = null;
+    directEntry = preview && !scene?.reveal ? {id: destination.id, y, complete:false} : null;
     if (focus) {
-      destination.setAttribute('tabindex', '-1');
+      if (destination.tabIndex < 0 && !destination.hasAttribute('tabindex')) {
+        destination.setAttribute('tabindex', '-1');
+      }
       destination.focus({ preventScroll: true });
     }
     window.scrollTo({top:y, behavior:'instant'});
@@ -328,7 +475,7 @@
   function rememberCompactPosition() {
     const y = scrollY;
     const visible = item => y >= item.top - viewHeight && y < item.top + item.height - header.offsetHeight;
-    const candidates = sceneGeometry.filter(item => (item.compact || item.earlyReveal) && visible(item));
+    const candidates = sceneGeometry.filter(item => (item.future || item.earlyReveal) && visible(item));
     const scene = candidates.find(item => y >= item.approachStart && y >= item.top - item.inset) || candidates[0];
     const key = `tradex-scroll:${location.pathname}${location.search}${location.hash}`;
     try {
@@ -353,8 +500,7 @@
     const amounts = windows.map((range, index) => {
       if (entry?.complete || (entry && index === 0)) return 1;
       if (isPinned) return amountAt(progress, range);
-      if (scene.compact) return revealInFlow(scene.steps[index], .98 - index * .10, .83 - index * .10);
-      if (scene.earlyReveal) return revealInFlow(scene.steps[index], .98, .80);
+      if (scene.earlyReveal || scene.future) return revealInFlow(scene.steps[index], .98, .80);
       return revealInFlow(scene.steps[index]);
     });
     if (!reduceMotion.matches) {
@@ -368,7 +514,8 @@
       if (scene.element.id === 'purchasing') {
         const selected = index === active;
         const color = !isPinned || index <= active
-          ? selected ? '#00748d' : '#326577' : '#152732';
+          ? selected ? 'var(--step-current)' : 'var(--step-reached)'
+          : 'var(--step-upcoming)';
         step.style.setProperty('--stage-accent', color);
         step.toggleAttribute('data-current', selected);
         const fragment = portalFragments[index];
@@ -380,16 +527,6 @@
     return amounts;
   }
 
-  function compactProgress(scene, y) {
-    const fullyVisible = Math.min(scene.top + scene.stageHeight - viewHeight, scene.pinStart - 28);
-    const lead = Math.min(112, Math.max(55, viewHeight * .12));
-    // Start the first reveal on approach, then reserve the pinned travel for the second.
-    const approach = .16 * ramp(y, fullyVisible - lead, fullyVisible);
-    const arrival = .32 * ramp(y, fullyVisible, scene.pinStart);
-    const pinned = .52 * ramp(y, scene.pinStart, scene.pinStart + scene.reveal);
-    return approach + arrival + pinned;
-  }
-
   function stageProgress(scene, y) {
     if (!scene.reveal) {
       return clamp((y + viewHeight * .2 - scene.top) / Math.max(viewHeight * .28, scene.height - viewHeight * .67));
@@ -398,18 +535,17 @@
       const approach = .26 * ramp(y, scene.approachStart, scene.pinStart);
       return approach + .74 * ramp(y, scene.pinStart, scene.pinStart + scene.reveal);
     }
-    return scene.compact ? compactProgress(scene, y) : clamp((y - scene.pinStart) / scene.reveal);
+    return clamp((y - scene.pinStart) / scene.reveal);
   }
 
-  function render() {
+  function render(time) {
     frame = 0;
     const y = scrollY;
     let active = '';
     const windows = {
-      compound: settings.compoundStages,
-      dealers: settings.compactStages,
       purchasing: settings.purchasingStages,
       coming: settings.futureStages,
+      compound: settings.compoundStages,
     };
     for (const scene of sceneGeometry) {
       const id = scene.element.id;
@@ -419,15 +555,27 @@
       const entry = directEntry?.id === id ? directEntry : null;
       const progress = stageProgress(scene, y);
       let rail = entry?.complete || reduceMotion.matches ? 1 : progress;
-      if (scene.top <= y + viewHeight * .29) active = id;
+      if (scene.top <= y + viewHeight * .29) active = id === 'ecosystem' && progress >= settings.audienceStart ? 'dealers' : id;
+      const buffered = bottom >= y - viewHeight && scene.top <= y + viewHeight * 2;
+      if (!buffered && scene.lastRender.y === (y > bottom ? Infinity : -Infinity) && !reduceMotion.matches) continue;
+      scene.lastRender.y = buffered ? y : y > bottom ? Infinity : -Infinity;
+      updateChoreography(scene, y, pinned);
       if (id === 'top') updateHero(progress, pinned, y, scene.top, bottom);
-      else if (id === 'ecosystem') updateEcosystem(scene, progress, pinned);
+      else if (scene.orbit) {
+        updateEcosystem(scene, progress, y, time);
+        updateAudienceDeck(scene, progress, pinned, y);
+      }
+      else if (scene.sequence.length) updateSequence(scene, progress, pinned);
+      else if (scene.study.length) updateStudy(scene, progress, pinned);
       else if (windows[id]) {
         const amounts = updateStages(scene, progress, pinned, windows[id], entry);
-        if ((scene.compact || scene.earlyReveal) && !pinned) rail = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
+        if ((scene.future || scene.earlyReveal) && !pinned) rail = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
       }
       scene.element.style.setProperty('--section-progress', rail.toFixed(3));
-      if (id === 'compound') updateCompoundCount(scene, progress, entry?.complete);
+      if (id === 'compound') {
+        updateCompoundCount(scene, progress, entry?.complete);
+        updatePhoto(scene, progress, 1.085);
+      }
     }
     if (active !== currentNav) {
       currentNav = active;
@@ -502,6 +650,7 @@
           flag.setAttribute('aria-hidden', 'true');
           flag.innerHTML = flags[code];
           const label = document.createElement('span');
+          label.className = 'sr-only';
           label.textContent = languages[code][0];
           localiseInline(label, languages[code][1]);
           li.append(flag, label);
@@ -579,7 +728,7 @@
     areaFormat = new Intl.NumberFormat(lang === 'de' ? 'de-DE' : 'en-GB');
     count.textContent = areaFormat.format(lastArea);
     document.title = lang === 'de' ? 'TRADEX. | Europäischer Fahrzeughandel' : 'TRADEX. | European car trading';
-    for (const [suffix, property] of [['', ''], ['-label', 'aria-label'], ['-alt', 'alt'], ['-href', 'href']]) {
+    for (const [suffix, property] of [['', ''], ['-label', 'aria-label'], ['-alt', 'alt'], ['-href', 'href'], ['-content', 'content']]) {
       all(`[data-de${suffix}]`).forEach(element => {
         const original = property ? element.getAttribute(property) : element.textContent;
         const key = `data-en${suffix}`;
@@ -627,11 +776,27 @@
       }
     }, { threshold:.13 });
     all('[data-enter]').forEach(node => observer.observe(node));
+    const portraits = all('[data-portrait]');
+    const portraitObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const portrait = entry.target;
+        const img = by('.portrait-frame img', portrait);
+        portraitObserver.unobserve(portrait);
+        img.decode().catch(() => {}).then(() => { portrait.dataset.portraitVisible = ''; });
+      }
+    }, { rootMargin: '0px 0px 85px 0px', threshold: .08 });
+    portraits.forEach((portrait,index) => {
+      portrait.style.setProperty('--portrait-delay', `${(index % 4) * 36}ms`);
+      portraitObserver.observe(portrait);
+    });
+    root.classList.add('portrait-reveals');
   }
 
   root.classList.add('js');
   installConfiguredContent();
   collectScenes();
+  installAudienceControls();
   installHeroSources();
   if ((!location.hash || location.hash === '#top') && scrollY < 20) updatePlayback(true);
   buildProfiles();
