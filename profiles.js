@@ -35,7 +35,7 @@ window.TRADEX_PROFILES = {
     languages:['de','en'],
   },
   'pedro-oliveira': {
-    bio: { en:"Pedro helps customers register and set up their TRADEX. accounts. He is a contact for transport, delivery and claims after purchase.", de:"Pedro unterstützt Kunden bei der Registrierung und Einrichtung ihres TRADEX. Kontos. Nach dem Kauf ist er Ansprechpartner für Transport, Lieferung und Reklamationen." },
+    bio: { en:"Pedro helps customers register and set up their TRADEX. accounts. He is a contact for transport, delivery and claims after purchase.", de:"Pedro unterstützt Kunden bei der Registrierung und Einrichtung ihres Kontos bei TRADEX.. Nach dem Kauf ist er Ansprechpartner für Transport, Lieferung und Reklamationen." },
     focus: { en:"Customer onboarding · Delivery and claims", de:"Kundenregistrierung · Lieferung und Reklamationen" },
     languages:['en','pt','es'],
   },
@@ -45,12 +45,12 @@ window.TRADEX_PROFILES = {
     languages:['en','pt','ro'],
   },
   'lorela-picari': {
-    bio: { en:"Lorela leads the programme for the TRADEX. dealer portal, marketplace and internal tools. She also manages customer accounts.", de:"Lorela leitet das Programm für das TRADEX. Händlerportal, den Marktplatz und interne Anwendungen. Sie betreut außerdem Kundenkonten." },
+    bio: { en:"Lorela leads the programme for the TRADEX. dealer portal, marketplace and internal tools. She also manages customer accounts.", de:"Lorela leitet das Programm für das Händlerportal, den Marktplatz und interne Anwendungen von TRADEX.. Sie betreut außerdem Kundenkonten." },
     focus: { en:"Programme management · Account management", de:"Programmmanagement · Account Management" },
     languages:['en','pt','it','es','de','sq','tr'],
   },
   'pedro-nunes': {
-    bio: { en:"Pedro designs security for the TRADEX. platform and customer data. He works with the company's external data protection officer.", de:"Pedro entwickelt die Sicherheitsarchitektur der TRADEX. Plattform und schützt Kundendaten. Er arbeitet mit dem externen Datenschutzbeauftragten zusammen." },
+    bio: { en:"Pedro designs security for the TRADEX. platform and customer data. He works with the company's external data protection officer.", de:"Pedro entwickelt die Sicherheitsarchitektur der Plattform von TRADEX. und schützt Kundendaten. Er arbeitet mit dem externen Datenschutzbeauftragten zusammen." },
     focus: { en:"Platform security · Data protection", de:"Plattformsicherheit · Datenschutz" },
     languages:['en','pt'],
   },

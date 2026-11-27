@@ -5,7 +5,7 @@ window.TRADEX_CONFIG = {
     heroTravelDesktop: 1.4,
     heroTravelMobile: 1.15,
     heroClearAt: .32,
-    heroStages: [[.31,.42],[.52,.62],[.73,.83],[.91,1]],
+    heroStages: [[.28,.44],[.42,.58],[.55,.71],[.68,.84]],
     companyTravel: 1.66,
     ecosystemTravel: 3.05,
     audienceStart: .22,
@@ -29,9 +29,9 @@ window.TRADEX_CONFIG = {
   media: {
     hero: {
       enabled: true,
-      mp4: 'assets/video/hero-montage-r19.mp4',
+      mp4: 'assets/video/tradex-hero.mp4',
     },
-    compound: '',
+    compound: 'assets/video/tradex-compound.mp4',
   },
   locations: { de: [], at: [] },
 };

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="461.3 287.615 666.2 673.885">
+  <defs>
+    <linearGradient id="_Linear5" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-392.993,469.603,-469.603,-392.993,877.933,508.007)">
+      <stop offset="0" style="stop-color:rgb(0,211,251);stop-opacity:1"/>
+      <stop offset="0.09" style="stop-color:rgb(9,233,253);stop-opacity:1"/>
+      <stop offset="0.18" style="stop-color:rgb(9,211,249);stop-opacity:1"/>
+      <stop offset="0.27" style="stop-color:rgb(4,225,252);stop-opacity:1"/>
+      <stop offset="0.36" style="stop-color:rgb(11,191,247);stop-opacity:1"/>
+      <stop offset="0.46" style="stop-color:rgb(5,158,237);stop-opacity:1"/>
+      <stop offset="0.55" style="stop-color:rgb(2,127,227);stop-opacity:1"/>
+      <stop offset="0.64" style="stop-color:rgb(1,101,213);stop-opacity:1"/>
+      <stop offset="0.73" style="stop-color:rgb(1,79,192);stop-opacity:1"/>
+      <stop offset="0.82" style="stop-color:rgb(1,58,164);stop-opacity:1"/>
+      <stop offset="0.91" style="stop-color:rgb(1,40,130);stop-opacity:1"/>
+      <stop offset="1" style="stop-color:rgb(1,30,107);stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="_Linear6" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-392.993,469.603,-469.603,-392.993,877.933,508.007)">
+      <stop offset="0" style="stop-color:rgb(0,211,251);stop-opacity:1"/>
+      <stop offset="0.09" style="stop-color:rgb(9,233,253);stop-opacity:1"/>
+      <stop offset="0.18" style="stop-color:rgb(9,211,249);stop-opacity:1"/>
+      <stop offset="0.27" style="stop-color:rgb(4,225,252);stop-opacity:1"/>
+      <stop offset="0.36" style="stop-color:rgb(11,191,247);stop-opacity:1"/>
+      <stop offset="0.46" style="stop-color:rgb(5,158,237);stop-opacity:1"/>
+      <stop offset="0.55" style="stop-color:rgb(2,127,227);stop-opacity:1"/>
+      <stop offset="0.64" style="stop-color:rgb(1,101,213);stop-opacity:1"/>
+      <stop offset="0.73" style="stop-color:rgb(1,79,192);stop-opacity:1"/>
+      <stop offset="0.82" style="stop-color:rgb(1,58,164);stop-opacity:1"/>
+      <stop offset="0.91" style="stop-color:rgb(1,40,130);stop-opacity:1"/>
+      <stop offset="1" style="stop-color:rgb(1,30,107);stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <path id="facet-cyan-front" d="M619.664,289.615L1125.5,959L723.5,620L621,753.5L464,959.5L463.3,959.5L619.664,289.615Z" style="fill:url(#_Linear5);fill-rule:nonzero;stroke:url(#_Linear6);stroke-width:0.8px;"/>
+</svg>

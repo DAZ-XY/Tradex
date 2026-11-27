@@ -14,11 +14,15 @@
   const nav = by('#site-nav');
   const hero = by('.hero');
   const heroStage = by('.hero-stage');
+  const heroCopy = by('.hero-copy');
+  const heroSlogan = by('#hero-slogan');
   const heroSummary = by('.hero-summary');
   const heroMedia = by('.hero-media');
   const heroVideo = by('#hero-video');
   const desktopPoster = heroVideo.getAttribute('poster');
-  const videoToggle = by('#video-toggle');
+  const compoundVideo = by('#compound-video');
+  const compoundFrame = by('.compound-frame');
+  const playingVideos = new WeakSet();
   const languageBar = by('.languages');
   const localeButtons = all('[data-lang]', languageBar);
   const cursor = by('.cursor-light');
@@ -37,16 +41,13 @@
   let pointerFrame = 0;
   let mouseX = 0, mouseY = 0, lightX = 0, lightY = 0;
   let videoPath = '';
-  let videoRequested = false;
-  let videoBlocked = false;
-  let videoPausedByVisitor = false;
   let activeProfile = null;
   let ignoreProfileFocus = false;
-  let directEntry = null;
   let currentNav = '';
   let lastArea = 100000;
   let sceneGeometry = [];
   let summaryShift = 0;
+  let alignedHeadlineOffset = 0;
   let viewHeight = 0;
   function setMenu(open) {
     header.classList.toggle('menu-open', open);
@@ -63,8 +64,7 @@
 
     const previousTime = heroVideo.currentTime;
     videoPath = path;
-    videoRequested = false;
-    videoBlocked = false;
+    playingVideos.delete(heroVideo);
     heroVideo.muted = true;
     heroVideo.toggleAttribute('data-landscape', path === mp4);
     if (previousTime > 0) {
@@ -77,41 +77,31 @@
     heroVideo.setAttribute('src', path);
   }
 
-  function updateVideoControl() {
-    videoToggle.textContent = videoPausedByVisitor || videoBlocked
-      ? (lang === 'de' ? 'Video abspielen' : 'Play video')
-      : (lang === 'de' ? 'Video pausieren' : 'Pause video');
-  }
-
-  function updatePlayback(mediaVisible) {
-    const shouldPlay = Boolean(videoPath) && mediaVisible && !document.hidden && !videoPausedByVisitor && !reduceMotion.matches;
-    if (shouldPlay === videoRequested || (shouldPlay && videoBlocked)) return;
-    videoRequested = shouldPlay;
+  function updatePlayback(video, mediaVisible) {
+    const shouldPlay = video.hasAttribute('src') && mediaVisible && !document.hidden && !reduceMotion.matches;
+    if (shouldPlay === playingVideos.has(video)) return;
     if (!shouldPlay) {
-      heroVideo.pause();
+      playingVideos.delete(video);
+      video.pause();
       return;
     }
-    const requestedPath = videoPath;
-    heroVideo.play().catch(error => {
-      if (videoPath !== requestedPath || !videoRequested || error.name === 'AbortError') return;
-      videoRequested = false;
-      videoBlocked = true;
-      updateVideoControl();
-      schedule();
-    });
+    playingVideos.add(video);
+    // Keep the poster available if the browser blocks automatic playback.
+    video.play().catch(() => {});
+  }
+
+  function updateCompoundPlayback() {
+    const bounds = compoundFrame.getBoundingClientRect();
+    const visible = bounds.bottom > 0 && bounds.top < viewHeight;
+    if (visible && config.media.compound && !reduceMotion.matches && !compoundVideo.hasAttribute('src')) {
+      compoundVideo.src = config.media.compound;
+    }
+    updatePlayback(compoundVideo, visible);
   }
 
 
   function installConfiguredContent() {
     all('[data-url]').forEach(link => { link.href = config.urls[link.dataset.url]; });
-
-    const compoundPhoto = by('#compound-photo');
-    if (config.media.compound) {
-      compoundPhoto.src = config.media.compound;
-      compoundPhoto.alt = 'TRADEX. vehicle logistics compound';
-      compoundPhoto.dataset.deAlt = 'TRADEX. Fahrzeuglogistikstandort';
-      by('#compound-image-note').hidden = true;
-    }
 
     for (const location of all('[data-location]')) {
       const lines = config.locations[location.dataset.location];
@@ -132,51 +122,7 @@
     ? Number(progress >= range[0]) : smooth(ramp(progress, ...range));
 
   const heroParts = all(':scope > p, :scope > .action-row', heroSummary);
-  const portalStack = by('.portal-stack');
-  const portalFragments = all('.portal-fragment', portalStack);
-  const portalSteps = all('.purchase-step');
-  const deck = by('.audience-deck');
-  const spineGroup = by('.deck-spines', deck);
-  const spines = all('[data-spine]', deck);
-  let audienceOverride = null;
-  let lastAudience = -1;
-  let deckPinned = false;
   const choreoWindows = { label:[0,.31], title:[.11,.54], lead:[.30,.78], detail:[.48,.98], photo:[0,.69] };
-
-  function chooseAudience(index, mode) {
-    if (!deckPinned) {
-      if (mode === 'tap') goToSection(by('#' + spines[index].getAttribute('aria-controls')), true);
-      return;
-    }
-    audienceOverride = { index, mode, y:scrollY };
-    schedule();
-  }
-
-  function installAudienceControls() {
-    spineGroup.hidden = false;
-    spines.forEach((button, index) => {
-      button.addEventListener('pointerenter', event => {
-        if (event.pointerType === 'mouse' && audienceOverride?.mode !== 'focus') chooseAudience(index, 'hover');
-      });
-      button.addEventListener('pointerleave', () => {
-        if (audienceOverride?.mode === 'hover' && audienceOverride.index === index) {
-          audienceOverride = null;
-          schedule();
-        }
-      });
-      button.addEventListener('focus', () => {
-        if (button.matches(':focus-visible')) chooseAudience(index, 'focus');
-      });
-      button.addEventListener('blur', () => {
-        if (audienceOverride?.mode === 'focus' && audienceOverride.index === index) {
-          audienceOverride = null;
-          schedule();
-        }
-      });
-      button.addEventListener('click', () => chooseAudience(index, 'tap'));
-    });
-  }
-
 
   function setReveal(element, value, prefix = 'stage') {
     element.style.setProperty(`--${prefix}-opacity`, value.toFixed(3));
@@ -192,8 +138,6 @@
   function collectScenes() {
     const ratios = {
       top: () => mobileHero.matches ? settings.heroTravelMobile : settings.heroTravelDesktop,
-      purchasing: () => settings.purchasingTravel,
-      ecosystem: () => settings.ecosystemTravel,
       services: () => settings.serviceTravel,
       'data-and-people': () => settings.studyTravel,
       compound: () => settings.compoundTravel,
@@ -204,52 +148,34 @@
       const stage = by('.motion-stage', element);
       const steps = all('[data-step]', element);
       const future = element.id === 'coming';
-      const earlyReveal = element.id === 'purchasing';
       const sequence = all('[data-sequence]', element);
-      const audiences = all('[data-audience]', element);
-      const orbit = by('.orbit-turn', element);
-      const orbitMap = orbit?.closest('.participant-map');
       const study = all('[data-study]', element);
       scenes.set(element.id, {
-        element, stage, ratio: ratios[element.id], steps, future, earlyReveal, sequence, orbit, study, audiences,
+        element, stage, ratio: ratios[element.id], steps, future, sequence, study,
         pieces: sequence.map(panel => all('[data-piece]', panel)),
-        audienceParts: audiences.map(panel => all('[data-piece]', panel)),
         choreo: all('[data-choreo]', element),
-        lastRender: { y:NaN, audience:-1 },
-        orbitMotion: { angle:0, time:0 },
-        orbitMap,
-        arcs: orbit ? all('.orbit-active', orbit) : [],
-        points: orbit ? all('.orbit-point', element) : [],
+        lastRender: {y:NaN},
         photo: by('.photo-motion', element),
-        heading: earlyReveal ? by('.section-head', element) : null,
       });
     }
   }
 
-  function arrangePortal() {
-    const compact = mobileHero.matches;
-    portalFragments.forEach((fragment, index) => {
-      const target = compact ? portalSteps[index] : portalStack;
-      if (fragment.parentNode !== target) target.append(fragment);
-    });
-    const figure = by('.portal-composition');
-    const caption = by('#portal-illustration-title');
-    if (compact && caption.parentNode !== portalSteps[0]) {
-      portalSteps[0].insertBefore(caption, portalFragments[0]);
-    } else if (!compact && caption.parentNode !== figure) {
-      figure.prepend(caption);
+  function offsetWithin(element, ancestor) {
+    let offset = 0;
+    for (let node = element; node && node !== ancestor; node = node.offsetParent) {
+      offset += node.offsetTop;
     }
-    figure.hidden = compact;
+    return offset;
   }
 
   function measureMotion() {
     viewHeight = window.innerHeight;
     const motion = !reduceMotion.matches;
     root.classList.toggle('motion', motion);
-    arrangePortal();
     summaryShift = mobileHero.matches ? Math.min(heroSummary.offsetHeight * .74, viewHeight * .31) : viewHeight * .13;
+    alignedHeadlineOffset = offsetWithin(heroSummary, heroCopy) - offsetWithin(heroSlogan, heroCopy);
     for (const scene of scenes.values()) {
-      const needsDesktop = scene.sequence.length || scene.orbit || scene.study.length
+      const needsDesktop = scene.sequence.length || scene.study.length
         || scene.future || scene.element.id === 'compound';
       const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580)
         && (!needsDesktop || fullScenes.matches);
@@ -258,7 +184,7 @@
       const height = scene.stage?.offsetHeight || 0;
       const fits = canPin && height <= viewHeight + 1 && Boolean(scene.ratio);
       scene.reveal = fits ? Math.round(viewHeight * scene.ratio()) : 0;
-      const holdRatio = scene.future ? .25 : scene.earlyReveal ? .26 : .22;
+      const holdRatio = scene.future ? .25 : .22;
       const hold = fits ? Math.round(Math.min(270, viewHeight * holdRatio)) : 0;
       scene.travel = scene.reveal + hold;
       if (!fits) scene.element.classList.remove('is-pinned');
@@ -272,15 +198,7 @@
       const bounds = scene.element.getBoundingClientRect();
       const top = bounds.top + scrollY;
       const pinStart = top - scene.inset;
-      let approachStart = pinStart;
-      if (scene.earlyReveal && scene.reveal) {
-        const stageTop = scene.stage.getBoundingClientRect().top;
-        const headingTop = scene.heading.getBoundingClientRect().top;
-        const stepTop = scene.steps[0].getBoundingClientRect().top;
-        const firstVisible = top + Math.max(headingTop, stepTop) - stageTop - viewHeight * .83;
-        approachStart = pinStart - Math.min(viewHeight * .59, Math.max(80, pinStart - firstVisible));
-      }
-      return { ...scene, top, pinStart, approachStart, height: bounds.height };
+      return { ...scene, top, pinStart, height: bounds.height };
     });
     installHeroSources();
     schedule();
@@ -288,49 +206,25 @@
 
   function updateHero(progress, pinned, y, top, bottom) {
     const departure = pinned ? smooth(ramp(progress, 0, settings.heroClearAt)) : 0;
-    const headline = pinned ? smooth(ramp(progress, .045, settings.heroClearAt)) : 1;
+    const headlineProgress = smooth(ramp(progress, .055, .44));
+    const headlineTarget = mobileHero.matches ? 0 : alignedHeadlineOffset;
+    const headlineOffset = pinned
+      ? summaryShift + (headlineTarget - summaryShift) * headlineProgress
+      : 0;
     heroStage.style.setProperty('--media-clip', `${(44 * departure).toFixed(2)}%`);
     heroStage.style.setProperty('--media-y', `${(-62 * departure).toFixed(2)}%`);
-    heroStage.style.setProperty('--headline-y', `${(summaryShift * (1 - headline)).toFixed(2)}px`);
+    heroStage.style.setProperty('--headline-y', `${headlineOffset.toFixed(2)}px`);
     heroParts.forEach((part, index) => {
       const value = pinned ? amountAt(progress, settings.heroStages[index]) : revealInFlow(part);
       setReveal(part, value);
+      const lift = index === 0 ? 18 : 13;
+      part.style.setProperty('--summary-lift', `${((1 - value) * (reduceMotion.matches ? 0 : lift)).toFixed(2)}px`);
       if (part.classList.contains('action-row')) part.inert = value < .95 && !part.contains(document.activeElement);
     });
     const mediaAway = departure * 1.06 >= 1 || bottom <= y || top >= y + viewHeight;
     heroMedia.classList.toggle('is-away', mediaAway);
-    videoToggle.hidden = !videoPath || !heroVideo.videoWidth || reduceMotion.matches || mediaAway;
-    updatePlayback(!mediaAway);
+    updatePlayback(heroVideo, !mediaAway);
     header.classList.toggle('is-solid', y > 22);
-  }
-
-  function updateEcosystem(scene, progress, y, time) {
-    const staticOrbit = reduceMotion.matches;
-    if (!scene.reveal && !staticOrbit) {
-      const map = scene.orbitMap.getBoundingClientRect();
-      const center = map.top + map.height / 2;
-      progress = 1 - ramp(center, viewHeight * .23, viewHeight * .85);
-    }
-    const goal = staticOrbit ? 0 : smooth(progress) * settings.orbitDegrees;
-    const inView = scene.top < y + viewHeight && scene.top + scene.height > y;
-    const orbit = scene.orbitMotion;
-    const delta = goal - orbit.angle;
-    // Keep R19's progress-driven arcs, with the participant labels on a separate,
-    // counter-rotating HTML layer that stays accessible in either language.
-    const elapsed = orbit.time ? Math.min(time - orbit.time, 80) : 16.67;
-    const angle = inView && !staticOrbit && Math.abs(delta) > .04
-      ? orbit.angle + delta * (1 - Math.exp(-elapsed / 80)) : goal;
-    if (angle !== goal) schedule();
-    orbit.angle = angle;
-    orbit.time = angle === goal ? 0 : time;
-    scene.orbit.style.setProperty('--orbit-angle', `${angle.toFixed(3)}deg`);
-    scene.element.style.setProperty('--orbit-angle', `${angle.toFixed(3)}deg`);
-    scene.arcs.forEach((arc,index) => {
-      const draw = staticOrbit ? 1 : amountAt(progress, settings.ecosystemStages[index]);
-      arc.style.setProperty('--arc', (1 - draw).toFixed(3));
-      scene.points[index]?.toggleAttribute('data-reached', draw > .2);
-      scene.points[index]?.toggleAttribute('data-current', draw > .24 && draw < .95 && !staticOrbit);
-    });
   }
 
   function updateChoreography(scene, y, pinned) {
@@ -373,40 +267,6 @@
     });
   }
 
-  function updateAudienceDeck(scene, progress, pinned, y) {
-    if (audienceOverride && Math.abs(y - audienceOverride.y) > 12) audienceOverride = null;
-    const lead = settings.audienceStart;
-    const phase = Math.min(ramp(progress, lead, 1) * scene.audiences.length, scene.audiences.length - .0001);
-    const index = audienceOverride?.index ?? Math.floor(phase);
-    const open = pinned && (progress >= lead * .55 || Boolean(audienceOverride));
-    deckPinned = pinned;
-    scene.element.classList.toggle('deck-open', open);
-    const amount = open ? audienceOverride ? 1 : smooth(ramp(progress, lead * .55, lead)) : 0;
-    scene.element.style.setProperty('--deck-in', amount.toFixed(3));
-    const foreground = open ? index : -1;
-    if (lastAudience !== foreground || scene.lastRender.audience !== foreground) {
-      spines.forEach((button, i) => button.setAttribute('aria-pressed', String(foreground === i)));
-      lastAudience = foreground;
-      scene.lastRender.audience = foreground;
-    }
-
-    scene.audiences.forEach((panel, i) => {
-      const selected = i === foreground;
-      const depth = ((i - index + scene.audiences.length) % scene.audiences.length);
-      panel.toggleAttribute('data-foreground', selected);
-      panel.style.setProperty('--card-depth', depth);
-      if (pinned && !selected) panel.setAttribute('aria-hidden','true');
-      else panel.removeAttribute('aria-hidden');
-      if (pinned && !selected) return;
-      scene.audienceParts[i].forEach((piece, order) => {
-        const value = pinned
-          ? audienceOverride ? 1 : .68 + .32 * smooth(ramp(phase % 1, order * .1, .36 + order * .1))
-          : revealInFlow(piece, .98, .80);
-        setReveal(piece, value, 'piece');
-      });
-    });
-  }
-
   function updatePhoto(scene, progress, maxScale) {
     const value = reduceMotion.matches ? 0 : smooth(progress);
     scene.photo.style.setProperty('--photo-scale', (1 + value * (maxScale - 1)).toFixed(4));
@@ -427,8 +287,8 @@
     count.textContent = areaFormat.format(value);
   }
 
-  function updateCompoundCount(scene, progress, complete) {
-    if (complete || reduceMotion.matches) {
+  function updateCompoundCount(scene, progress) {
+    if (reduceMotion.matches) {
       setNumber(100000);
       return;
     }
@@ -438,21 +298,14 @@
   }
 
   function goToSection(destination, focus = false) {
-    const audience = destination.matches('[data-audience], .audience-deck');
-    const scene = sceneGeometry.find(item => item.element === destination || (audience && item.element.id === 'ecosystem'));
-    const sequenceIndex = audience && scene?.reveal ? scene.audiences.indexOf(destination) : -1;
-    const preview = destination.id === 'purchasing';
+    const scene = sceneGeometry.find(item => item.element === destination);
     const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
-    const top = audience ? destination.getBoundingClientRect().top + scrollY
-      : scene?.top ?? destination.getBoundingClientRect().top + scrollY;
-    const lead = settings.audienceStart;
-    const entryProgress = sequenceIndex >= 0 ? lead + (1 - lead) * (sequenceIndex + .45) / scene.audiences.length
-      : audience ? lead + .037 : destination.id === 'coming' ? .45 : 0;
-    const entryDistance = preview && scene?.reveal ? scene.reveal * .06 : (scene?.reveal || 0) * entryProgress;
-    const y = scene?.reveal ? Math.ceil(scene.pinStart + entryDistance)
+    const top = scene?.top ?? destination.getBoundingClientRect().top + scrollY;
+    const entryProgress = {compound:.13, coming:.45}[destination.id] ?? 0;
+    const entryDistance = (scene?.reveal || 0) * entryProgress;
+    const storyTarget = window.tradexStudioAnchor?.(destination);
+    const y = Number.isFinite(storyTarget) ? storyTarget : scene?.reveal ? Math.ceil(scene.pinStart + entryDistance)
       : destination === hero ? 0 : Math.max(0, top - padding);
-    audienceOverride = null;
-    directEntry = preview && !scene?.reveal ? {id: destination.id, y, complete:false} : null;
     if (focus) {
       if (destination.tabIndex < 0 && !destination.hasAttribute('tabindex')) {
         destination.setAttribute('tabindex', '-1');
@@ -463,20 +316,24 @@
     schedule();
   }
 
+  window.tradexEcosystemRefresh = measureMotion;
+  window.tradexHeroDescriptionAnchor = () => {
+    const scene = sceneGeometry.find(item => item.element === hero);
+    if (scene?.reveal) return scene.pinStart + scene.reveal * settings.heroStages.at(-1)[1];
+    return heroSummary.getBoundingClientRect().top + scrollY - header.offsetHeight;
+  };
+
   function restoreSectionFromHash() {
     const destination = document.getElementById(location.hash.slice(1));
     if (destination) goToSection(destination);
-    else {
-      directEntry = null;
-      schedule();
-    }
+    else schedule();
   }
 
   function rememberCompactPosition() {
     const y = scrollY;
     const visible = item => y >= item.top - viewHeight && y < item.top + item.height - header.offsetHeight;
-    const candidates = sceneGeometry.filter(item => (item.future || item.earlyReveal) && visible(item));
-    const scene = candidates.find(item => y >= item.approachStart && y >= item.top - item.inset) || candidates[0];
+    const candidates = sceneGeometry.filter(item => item.future && visible(item));
+    const scene = candidates.find(item => y >= item.top - item.inset) || candidates[0];
     const key = `tradex-scroll:${location.pathname}${location.search}${location.hash}`;
     try {
       if (scene) {
@@ -495,12 +352,11 @@
     refreshPosition = null;
   }
 
-  function updateStages(scene, progress, isPinned, windows, entry) {
+  function updateStages(scene, progress, isPinned, windows) {
     let active = -1;
     const amounts = windows.map((range, index) => {
-      if (entry?.complete || (entry && index === 0)) return 1;
       if (isPinned) return amountAt(progress, range);
-      if (scene.earlyReveal || scene.future) return revealInFlow(scene.steps[index], .98, .80);
+      if (scene.future) return revealInFlow(scene.steps[index], .98, .80);
       return revealInFlow(scene.steps[index]);
     });
     if (!reduceMotion.matches) {
@@ -511,18 +367,7 @@
     scene.steps.forEach((step, index) => {
       const value = amounts[index];
       setReveal(step, value, 'step');
-      if (scene.element.id === 'purchasing') {
-        const selected = index === active;
-        const color = !isPinned || index <= active
-          ? selected ? 'var(--step-current)' : 'var(--step-reached)'
-          : 'var(--step-upcoming)';
-        step.style.setProperty('--stage-accent', color);
-        step.toggleAttribute('data-current', selected);
-        const fragment = portalFragments[index];
-        const inStack = portalStack.contains(fragment);
-        fragment.toggleAttribute('data-portal-current', selected);
-        setReveal(fragment, inStack ? value : 1);
-      }
+      step.toggleAttribute('data-current', index === active);
     });
     return amounts;
   }
@@ -530,10 +375,6 @@
   function stageProgress(scene, y) {
     if (!scene.reveal) {
       return clamp((y + viewHeight * .2 - scene.top) / Math.max(viewHeight * .28, scene.height - viewHeight * .67));
-    }
-    if (scene.earlyReveal) {
-      const approach = .26 * ramp(y, scene.approachStart, scene.pinStart);
-      return approach + .74 * ramp(y, scene.pinStart, scene.pinStart + scene.reveal);
     }
     return clamp((y - scene.pinStart) / scene.reveal);
   }
@@ -543,7 +384,6 @@
     const y = scrollY;
     let active = '';
     const windows = {
-      purchasing: settings.purchasingStages,
       coming: settings.futureStages,
       compound: settings.compoundStages,
     };
@@ -551,30 +391,25 @@
       const id = scene.element.id;
       const pinned = Boolean(scene.travel);
       const bottom = scene.top + scene.height;
-      if (directEntry?.id === id && (y < directEntry.y - (pinned ? 2 : 24) || bottom <= y)) directEntry = null;
-      const entry = directEntry?.id === id ? directEntry : null;
       const progress = stageProgress(scene, y);
-      let rail = entry?.complete || reduceMotion.matches ? 1 : progress;
-      if (scene.top <= y + viewHeight * .29) active = id === 'ecosystem' && progress >= settings.audienceStart ? 'dealers' : id;
+      let rail = reduceMotion.matches ? 1 : progress;
+      if (scene.top <= y + viewHeight * .29) active = id === 'ecosystem' && by('#dealers').getBoundingClientRect().top < viewHeight * .3 ? 'dealers' : id;
       const buffered = bottom >= y - viewHeight && scene.top <= y + viewHeight * 2;
       if (!buffered && scene.lastRender.y === (y > bottom ? Infinity : -Infinity) && !reduceMotion.matches) continue;
       scene.lastRender.y = buffered ? y : y > bottom ? Infinity : -Infinity;
       updateChoreography(scene, y, pinned);
       if (id === 'top') updateHero(progress, pinned, y, scene.top, bottom);
-      else if (scene.orbit) {
-        updateEcosystem(scene, progress, y, time);
-        updateAudienceDeck(scene, progress, pinned, y);
-      }
       else if (scene.sequence.length) updateSequence(scene, progress, pinned);
       else if (scene.study.length) updateStudy(scene, progress, pinned);
       else if (windows[id]) {
-        const amounts = updateStages(scene, progress, pinned, windows[id], entry);
-        if ((scene.future || scene.earlyReveal) && !pinned) rail = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
+        const amounts = updateStages(scene, progress, pinned, windows[id]);
+        if (scene.future && !pinned) rail = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
       }
       scene.element.style.setProperty('--section-progress', rail.toFixed(3));
       if (id === 'compound') {
-        updateCompoundCount(scene, progress, entry?.complete);
+        updateCompoundCount(scene, progress);
         updatePhoto(scene, progress, 1.085);
+        updateCompoundPlayback();
       }
     }
     if (active !== currentNav) {
@@ -631,9 +466,13 @@
       if (!datum) continue;
       const trigger = by('.portrait-trigger', person);
       const panel = by('.inline-profile', person);
+      const portrait = by('.portrait-display', person);
       const name = by('.person-meta h3', person);
       const role = by('.person-meta p', person);
       appendProfileText(panel, { en: name.textContent, de: name.textContent }, 'profile-name');
+      const panelName = by('.profile-name', panel);
+      panelName.id = `${panel.id}-name`;
+      panel.setAttribute('aria-labelledby', panelName.id);
       appendProfileText(panel, { en: role.textContent, de: role.dataset.de }, 'profile-role');
       appendProfileText(panel, datum.bio, 'bio');
       appendProfileText(panel, datum.focus, 'focus');
@@ -669,39 +508,39 @@
       }
       if (contacts.childElementCount) panel.append(contacts);
       trigger.hidden = false;
-      const record = { person, trigger, panel, pinned: false };
-      person.addEventListener('pointerenter', event => {
-        if (event.pointerType === 'mouse' || (event.pointerType === 'pen' && event.buttons === 0)) openProfile(record, false);
+      const record = { person, trigger, panel };
+      let pressType = '';
+      portrait.addEventListener('pointerenter', event => {
+        if (event.pointerType === 'mouse' || (event.pointerType === 'pen' && event.buttons === 0)) openProfile(record);
       });
-      person.addEventListener('pointerleave', () => {
-        if (activeProfile === record && !record.pinned && !panel.contains(document.activeElement)) closeProfile();
+      portrait.addEventListener('pointerleave', event => {
+        if (event.pointerType !== 'touch' && activeProfile === record) closeProfile();
       });
       trigger.addEventListener('focus', () => {
-        if (!ignoreProfileFocus && trigger.matches(':focus-visible')) openProfile(record, false);
+        if (!ignoreProfileFocus && trigger.matches(':focus-visible')) openProfile(record);
       });
-      function toggleProfile() {
-        if (activeProfile === record && record.pinned) closeProfile(true);
-        else openProfile(record, true);
-      }
-      trigger.addEventListener('click', toggleProfile);
-      panel.addEventListener('click', event => {
-        if (!event.target.closest('a,button')) toggleProfile();
+      trigger.addEventListener('pointerdown', event => { pressType = event.pointerType; });
+      trigger.addEventListener('click', event => {
+        if (event.detail === 0) openProfile(record);
+        else if (pressType === 'touch') {
+          if (activeProfile === record) closeProfile();
+          else openProfile(record);
+        }
+        pressType = '';
       });
       person.addEventListener('focusout', event => {
-        if (activeProfile === record && !person.contains(event.relatedTarget) && !person.matches(':hover')) closeProfile();
+        if (activeProfile === record && !person.contains(event.relatedTarget) && !portrait.matches(':hover')) closeProfile();
       });
       panel.hidden = false;
       panel.inert = true;
     }
   }
 
-  function openProfile(record, pinned) {
+  function openProfile(record) {
     if (activeProfile !== record) {
-      if (!pinned && activeProfile?.panel.contains(document.activeElement)) return;
       closeProfile();
       activeProfile = record;
     }
-    record.pinned ||= pinned;
     record.panel.inert = false;
     record.person.classList.add('is-expanded');
     record.trigger.setAttribute('aria-expanded', 'true');
@@ -710,7 +549,6 @@
   function closeProfile(restoreFocus = false) {
     if (!activeProfile) return;
     const { panel, person, trigger } = activeProfile;
-    activeProfile.pinned = false;
     activeProfile = null;
     panel.inert = true;
     person.classList.remove('is-expanded');
@@ -744,7 +582,6 @@
       element.innerHTML = lang === 'de' ? element.dataset.deHtml : element.dataset.enHtml;
     });
     for (const button of localeButtons) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
-    updateVideoControl();
     measureMotion();
   }
 
@@ -769,7 +606,7 @@
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         observer.unobserve(entry.target);
-        if (reduceMotion.matches || (directEntry && entry.target.closest('section')?.id === directEntry.id)) continue;
+        if (reduceMotion.matches) continue;
         const index = all('[data-enter]', entry.target.parentElement).indexOf(entry.target);
         entry.target.animate([{opacity:.25,transform:'translateY(14px)'},{opacity:1,transform:'translateY(0)'}],
           {duration:380,delay:(index % 4) * 42,easing:'ease-out',fill:'none'});
@@ -796,9 +633,8 @@
   root.classList.add('js');
   installConfiguredContent();
   collectScenes();
-  installAudienceControls();
   installHeroSources();
-  if ((!location.hash || location.hash === '#top') && scrollY < 20) updatePlayback(true);
+  if ((!location.hash || location.hash === '#top') && scrollY < 20) updatePlayback(heroVideo, true);
   buildProfiles();
   installEntrances();
   menu.hidden = false;
@@ -807,13 +643,16 @@
   menu.addEventListener('click', () => setMenu(menu.getAttribute('aria-expanded') === 'false'));
   document.addEventListener('click', event => {
     const navLink = event.target.closest('a[href^="#"]');
-    if (!navLink?.hash || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!navLink?.hash || navLink.hasAttribute('data-story-select') || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const destination = document.getElementById(navLink.hash.slice(1));
     if (!destination) return;
     event.preventDefault();
     setMenu(false);
-    if (location.hash !== navLink.hash) history.pushState(null, '', navLink.hash);
-    goToSection(destination, true);
+    const jump = () => {
+      if (location.hash !== navLink.hash) history.pushState(null, '', navLink.hash);
+      goToSection(destination, true);
+    };
+    if (!window.tradexApprovedNavigate?.(destination, jump)) jump();
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
@@ -850,19 +689,6 @@
     });
   }
 
-  videoToggle.addEventListener('click', () => {
-    if (videoBlocked) {
-      videoBlocked = false;
-      videoPausedByVisitor = false;
-      updatePlayback(true);
-    } else {
-      videoPausedByVisitor = !videoPausedByVisitor;
-      if (!videoPausedByVisitor) updatePlayback(true);
-    }
-    updateVideoControl();
-    schedule();
-  });
-  heroVideo.addEventListener('loadeddata', schedule);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) resetLight();
     schedule();
@@ -882,9 +708,7 @@
   window.addEventListener('resize', measureMotion, { passive:true });
   reduceMotion.addEventListener('change', () => { resetLight(); measureMotion(); });
   if (document.fonts) document.fonts.ready.then(() => {
-    const wasAtEntry = directEntry && Math.abs(scrollY - directEntry.y) <= 24;
     measureMotion();
-    if (wasAtEntry) restoreSectionFromHash();
   });
   if ('ResizeObserver' in window) {
     const observer = new ResizeObserver(measureMotion);

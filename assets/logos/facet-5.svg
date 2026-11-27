@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="672 97.5 455.5 148.5">
+  <defs>
+    <radialGradient id="_Radial9" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-364.108,248.017,-183.841,-269.893,833.094,299.934)">
+      <stop offset="0" style="stop-color:rgb(92,255,251);stop-opacity:1"/>
+      <stop offset="0.15" style="stop-color:rgb(59,255,252);stop-opacity:1"/>
+      <stop offset="0.23" style="stop-color:rgb(43,255,253);stop-opacity:1"/>
+      <stop offset="0.31" style="stop-color:rgb(26,248,254);stop-opacity:1"/>
+      <stop offset="0.39" style="stop-color:rgb(10,239,253);stop-opacity:1"/>
+      <stop offset="0.46" style="stop-color:rgb(2,225,252);stop-opacity:1"/>
+      <stop offset="0.54" style="stop-color:rgb(2,209,249);stop-opacity:1"/>
+      <stop offset="0.62" style="stop-color:rgb(1,185,241);stop-opacity:1"/>
+      <stop offset="0.69" style="stop-color:rgb(2,155,229);stop-opacity:1"/>
+      <stop offset="0.77" style="stop-color:rgb(1,132,217);stop-opacity:1"/>
+      <stop offset="0.85" style="stop-color:rgb(0,110,204);stop-opacity:1"/>
+      <stop offset="0.92" style="stop-color:rgb(0,87,192);stop-opacity:1"/>
+      <stop offset="1" style="stop-color:rgb(0,65,179);stop-opacity:1"/>
+    </radialGradient>
+    <radialGradient id="_Radial10" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-364.108,248.017,-183.841,-269.893,833.094,299.934)">
+      <stop offset="0" style="stop-color:rgb(92,255,251);stop-opacity:1"/>
+      <stop offset="0.15" style="stop-color:rgb(59,255,252);stop-opacity:1"/>
+      <stop offset="0.23" style="stop-color:rgb(43,255,253);stop-opacity:1"/>
+      <stop offset="0.31" style="stop-color:rgb(26,248,254);stop-opacity:1"/>
+      <stop offset="0.39" style="stop-color:rgb(10,239,253);stop-opacity:1"/>
+      <stop offset="0.46" style="stop-color:rgb(2,225,252);stop-opacity:1"/>
+      <stop offset="0.54" style="stop-color:rgb(2,209,249);stop-opacity:1"/>
+      <stop offset="0.62" style="stop-color:rgb(1,185,241);stop-opacity:1"/>
+      <stop offset="0.69" style="stop-color:rgb(2,155,229);stop-opacity:1"/>
+      <stop offset="0.77" style="stop-color:rgb(1,132,217);stop-opacity:1"/>
+      <stop offset="0.85" style="stop-color:rgb(0,110,204);stop-opacity:1"/>
+      <stop offset="0.92" style="stop-color:rgb(0,87,192);stop-opacity:1"/>
+      <stop offset="1" style="stop-color:rgb(0,65,179);stop-opacity:1"/>
+    </radialGradient>
+  </defs>
+  <path id="facet-upper-right-cap" d="M674,244L781,99.5L1125.5,99.5L674,244Z" style="fill:url(#_Radial9);fill-rule:nonzero;stroke:url(#_Radial10);stroke-width:0.8px;"/>
+</svg>
