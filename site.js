@@ -5,7 +5,7 @@
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobileHero = matchMedia('(max-width: 720px)');
   const compactNav = matchMedia('(max-width: 1024px)');
-  const fullScenes = matchMedia('(min-width: 921px) and (min-height: 700px)');
+  const desktopScenes = matchMedia('(min-width: 921px)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const by = (selector, scope = document) => scope.querySelector(selector);
   const all = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -178,7 +178,7 @@
       const needsDesktop = scene.sequence.length || scene.study.length
         || scene.future || scene.element.id === 'compound';
       const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580)
-        && (!needsDesktop || fullScenes.matches);
+        && (!needsDesktop || desktopScenes.matches);
       scene.element.classList.toggle('is-pinned', Boolean(canPin));
       scene.inset = 0;
       const height = scene.stage?.offsetHeight || 0;
