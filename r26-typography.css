@@ -1,0 +1,47 @@
+@font-face {font-family:"Outfit";src:url("assets/fonts/Outfit-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap;}
+/* R26 typography: comparison Option M; Outfit restored for interface roles. */
+@font-face { font-family:"Plus Jakarta Sans";src:url("assets/fonts/PlusJakartaSans-Variable.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap; }
+@font-face { font-family:"Plus Jakarta Sans";src:url("assets/fonts/PlusJakartaSans-VariableItalic.woff2") format("woff2");font-weight:200 800;font-style:italic;font-display:swap; }
+@font-face { font-family:"Satoshi";src:url("assets/fonts/Satoshi-VariableItalic.woff2") format("woff2");font-weight:300 900;font-style:italic;font-display:swap; }
+:root {
+ --headline-font:"Satoshi",system-ui,sans-serif;
+ --support-font:"Plus Jakarta Sans",system-ui,sans-serif;
+ --interface-font:"Outfit",system-ui,sans-serif;
+ --text:var(--support-font);--ui:var(--interface-font);--technical:var(--interface-font);
+ --general:var(--headline-font);--alpino:var(--headline-font);--heading:var(--headline-font);
+ --heading-weight:600;--body-weight:400;--body-leading:1.55;--body-tracking:normal;
+ --heading-leading:1.08;--heading-tracking:-.026em;--type-body:15px;
+ --type-section:clamp(30px,3.15vw,44px);--type-feature:20px;--type-interface:14px;--type-label:12px;
+ --label-tracking:.085em;
+}
+/* Heading tiers, including studio sections whose original selectors had font shorthands. */
+h2,.studio-heading h2,.studio-panel-head h2 {font-family:var(--headline-font);font-weight:600;line-height:1.08;letter-spacing:-.026em;}
+:is(#compound-title,#purchase-title,#coming-title,#team-title) {--heading:var(--headline-font);--heading-weight:600;}
+.hero #hero-title {--hero-size:clamp(28px,3.99vw,58px);font-family:var(--headline-font);font-weight:600;line-height:1.02;letter-spacing:-.029em;}
+#company-title,#decision-title,#service-heading {font-size:clamp(30px,3.65vw,52px);}
+#eco-title {font-size:clamp(30px,4.1vw,54px);}
+#purchase-title {font-size:clamp(30px,4.25vw,54px);}
+#compound-title,#coming-title,#team-title {font-size:clamp(30px,3.65vw,52px);}
+#audience-title {font-size:clamp(27px,3.15vw,44px);}
+#join-title {font-family:var(--headline-font);font-weight:600;letter-spacing:-.026em;line-height:1.08;}
+h3:not(.label),.studio-card-text h3,.cinematic .sequence-copy h3,.audience-content h3,.editorial-copy > h3 {font-family:var(--headline-font);font-weight:550;font-size:20px;line-height:1.2;letter-spacing:-.013em;}
+.person-meta h3,.inline-profile .profile-name {font-family:var(--headline-font);font-weight:550;letter-spacing:-.013em;}
+/* Paragraphs: Option M Jakarta 400, 15/23.25, with no negative tracking. */
+.hero-descriptor,.hero-summary p,.chapter-lead,.scene-intro,.section-intro,.studio-lede p,.studio-card-text p,.studio-data .data-copy p:not(.label),.buy-heading .studio-lede p,.cinematic .sequence-copy p,.audience-content p,.compound-content p:not(.label),.future-features p:not(.label),.join-inner p {font-family:var(--support-font);font-size:15px;line-height:1.55;font-weight:400;letter-spacing:normal;}
+.hero-slogan,.label,.index,.scene-index,.department-label,.service-overline,.buy-overline {font-family:var(--interface-font);font-weight:580;font-size:12px;line-height:1.25;letter-spacing:.085em;}
+.hero-slogan {letter-spacing:.105em;}
+.site-nav a,.header-login,.section-rail a,.footer nav a,.text-link,.studio-node {font-family:var(--interface-font);font-weight:500;letter-spacing:normal;}
+.site-nav a,.header-login {font-size:14px;line-height:1.25;}
+.languages button {font-family:var(--interface-font);font-weight:650;font-size:12px;line-height:1;}
+.button {font-family:var(--interface-font);font-weight:650;font-size:14px;line-height:1.2;}
+/* Portal illustration typography: preserve the card shapes and interactions. */
+.portal-fragment,.buy-visual .portal-fragment {font-family:var(--interface-font);font-size:12px;font-weight:400;line-height:1.28;}
+.portal-fragment b,.buy-visual .portal-fragment b,.buy-visual .portal-selection b {font-family:var(--interface-font);font-weight:650;}
+.portal-fragment .token-label,.buy-visual .portal-fragment .token-label {font-family:var(--interface-font);font-weight:580;font-size:11px;line-height:1.15;letter-spacing:.045em;}
+.portal-fragment small,.buy-visual .portal-fragment small {font-family:var(--interface-font);font-weight:400;font-size:12px;line-height:1.28;}
+.compound-size {font-family:var(--headline-font);font-style:italic;font-weight:600;}
+@media (min-width:1025px) and (max-width:1250px) {.site-nav a {font-size:clamp(11px,1.1vw,14px);}}
+@media(max-width:720px) {
+ .hero #hero-title {--hero-size:clamp(24px,6.35vw,38px);}
+ #company-title,#decision-title,#service-heading,#eco-title,#purchase-title,#compound-title,#coming-title,#team-title,#audience-title {font-size:clamp(27px,6.3vw,40px);}
+}

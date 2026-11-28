@@ -1,0 +1,1 @@
+R26.3: continuous magnetic Plexus with depth layers and fixed mesh bonds. Data and people uses a four-step sticky sequence. Previous Option M typography and all media/copy retained. For short viewports the upper part of the section scrolls into place before the detail sequence pins. Reduced-motion mode uses instant detail changes and static mesh.

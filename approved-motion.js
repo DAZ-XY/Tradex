@@ -64,7 +64,8 @@
   }
 
   const tideSites = [
-    [hero, [[0, 3, 14, 38, -7, .24], [4, 97, 14, 25, 34, .26], [3, 91, 95, 31, -11, .22]]],
+    [hero, [[0, 3, 14, 38, -7, .24]]],
+    [$('#company .studio-pin'), [[4, 97, 14, 25, 34, .18], [3, 91, 95, 31, -11, .16]]],
     [$('.ecosystem-stage'), [[2, 102, 31, 31, 21, .20], [1, 9, 83, 30, -24, .18]]],
     [$('.compound-stage'), [[5, 98, 0, 30, -28, .25], [3, -1, 95, 44, 21, .18]]],
     [$('.purchase-stage'), [[2, 100, 6, 29, -18, .14], [3, 2, 95, 25, 9, .19]]],
@@ -92,50 +93,6 @@
     }, { rootMargin: '36px' });
     tide.forEach(layer => observer.observe(layer));
   }
-
-  const trails = document.createElement('div');
-  trails.className = 'approved-trails';
-  trails.setAttribute('aria-hidden', 'true');
-  document.body.append(trails);
-  const trailStamps = Array.from({length:10}, (_, index) => {
-    const image = new Image();
-    image.alt = '';
-    image.src = asset(index % 6);
-    trails.append(image);
-    return image;
-  });
-  let stampIndex = 0;
-  let stampTime = 0;
-  let stampX = -1000;
-  let stampY = -1000;
-  function trail(x, y) {
-    if (!canAnimate()) return;
-    const now = performance.now();
-    if (now - stampTime < 75 || Math.hypot(x - stampX, y - stampY) < 24) return;
-    const node = trailStamps[stampIndex % trailStamps.length];
-    const direction = x >= stampX ? 1 : -1;
-    const rotation = direction * (stampIndex % 3 + 1) * 15;
-    node.getAnimations().forEach(animation => animation.cancel());
-    node.animate([
-      {transform:`translate(${x - 10}px,${y - 10}px) rotate(0deg) scale(.55)`, opacity:0},
-      {transform:`translate(${x - 9}px,${y - 12}px) rotate(${rotation}deg)`, opacity:.38, offset:.26},
-      {transform:`translate(${x + direction * 9 - 10}px,${y - 28}px) rotate(${rotation * 1.6}deg) scale(.4)`, opacity:0},
-    ], {duration:530, easing:'cubic-bezier(.21,.7,.35,1)'});
-    stampIndex++;
-    stampTime = now;
-    stampX = x;
-    stampY = y;
-  }
-  function trackTrail(event) {
-    if (event.target.closest?.('dialog') || cut.classList.contains('approved-active')) return;
-    trail(event.clientX, event.clientY);
-  }
-  document.addEventListener('pointermove', event => {
-    if (event.pointerType !== 'touch') trackTrail(event);
-  }, {passive:true});
-  document.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'touch') trackTrail(event);
-  }, {passive:true});
 
   const cut = $('.approved-cut');
   const halves = $$('.approved-cut-half', cut);
@@ -220,13 +177,12 @@
     if (reduce.matches) {
       cancelFlight();
       finishCut();
-      trailStamps.forEach(stamp => stamp.getAnimations().forEach(animation => animation.cancel()));
       closing.classList.add('approved-assembled');
     }
     queueScrub();
   });
 
-  const effects = ["02", "04", "05", "13", "16", "22", "23", "24", "27", "34", "37", "38", "41", "43", "44", "46", "47", "48", "50", "52", "53"];
+  const effects = ["02", "05", "13", "16", "22", "23", "24", "27", "34", "37", "38", "41", "43", "44", "46", "47", "48", "50", "52", "53"];
   root.dataset.approvedMotion = effects.join(' ');
   root.classList.add(...effects.map(id => `fx-${id}`));
   if (!Element.prototype.animate) root.classList.remove('approved-closing-observed');

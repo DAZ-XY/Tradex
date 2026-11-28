@@ -126,7 +126,7 @@
 
   const entryActions = [
     ['34',find('.data-copy'),splitCopy],
-    ['37',find('.pricing-equation'),priceLock],
+    ...(find('.pricing-equation') ? [['37',find('.pricing-equation'),priceLock]] : []),
     ...portals.map(card => ['41',card,() => { if (!pinned(purchasing)) portalCard(card); }]),
     ...teamHeadings.map(heading => ['43',heading,() => teamHeading(heading)]),
     ...roadmap.map(card => ['44',card,() => roadmapCard(card)]),
@@ -164,7 +164,7 @@
     changeActions.set(node, actions);
     changes.observe(node, {attributes:true, attributeFilter:[...new Set(actions.map(([,key]) => key))]});
   }
-  observeChange(tradeChapters[1], '37', 'data-active', priceLock);
+  if (find('.pricing-equation') && tradeChapters[1]) observeChange(tradeChapters[1], '37', 'data-active', priceLock);
   for (const [index,chapter] of tradeChapters.entries()) {
     observeChange(chapter, '46', 'data-active', () => turnNumber(numbers[index]));
   }

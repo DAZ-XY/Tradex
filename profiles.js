@@ -10,7 +10,7 @@ window.TRADEX_PROFILES = {
     languages:['de','en'],
   },
   'kim-staats': {
-    bio: { en:"Kim co-founded TRADEX. and works in sales. He manages dealer relationships and helps partners find vehicles suited to their markets.", de:"Kim hat TRADEX. mitgegründet und arbeitet im Vertrieb. Er betreut Händler und hilft ihnen, passende Fahrzeuge für ihre Märkte zu finden." },
+    bio: { en:"Kim co-founded TRADEX. and is part of its management team. He manages dealer relationships and helps partners find vehicles suited to their markets.", de:"Kim hat TRADEX. mitgegründet und gehört zur Geschäftsleitung. Er betreut Händlerbeziehungen und hilft Partnern, Fahrzeuge zu finden, die zu ihren Märkten passen." },
     focus: { en:"Dealer relationships · Account management", de:"Händlerbetreuung · Account Management" },
     languages:['de','en','da'],
   },
@@ -20,7 +20,7 @@ window.TRADEX_PROFILES = {
     languages:['de','en','it','es','pt','fr'],
   },
   'paulo-guerra': {
-    bio: { en:"Paulo leads logistics at TRADEX. He plans vehicle transport across Europe, works with carriers and coordinates collection and release at the compound.", de:"Paulo leitet die Logistik bei TRADEX. Er plant Fahrzeugtransporte in ganz Europa, arbeitet mit Carriern zusammen und koordiniert Abholung und Freigabe am Logistikstandort." },
+    bio: { en:"Paulo leads logistics at TRADEX., coordinating carriers, drivers, logistics hubs and customers across Europe. He supports customers when delays, damage or last-minute changes arise, keeping the parties informed through delivery.", de:"Paulo leitet die Logistik bei TRADEX. und koordiniert Carrier, Fahrer, Logistikstandorte und Kunden in ganz Europa. Bei Verzögerungen, Schäden oder kurzfristigen Änderungen unterstützt er Kunden und hält alle Beteiligten bis zur Lieferung auf dem Laufenden." },
     focus: { en:"European logistics · Transport coordination", de:"Europäische Logistik · Transportkoordination" },
     languages:['en','pt','es'],
   },
@@ -35,17 +35,17 @@ window.TRADEX_PROFILES = {
     languages:['de','en'],
   },
   'pedro-oliveira': {
-    bio: { en:"Pedro helps customers register and set up their TRADEX. accounts. He is a contact for transport, delivery and claims after purchase.", de:"Pedro unterstützt Kunden bei der Registrierung und Einrichtung ihres Kontos bei TRADEX.. Nach dem Kauf ist er Ansprechpartner für Transport, Lieferung und Reklamationen." },
+    bio: { en:"Pedro supports customers throughout the purchase process, drawing on four years of automotive experience across sales, backoffice and transport. He helps with registration, invoices, delivery questions and claims.", de:"Pedro unterstützt Kunden während des gesamten Kaufprozesses. Er verfügt über vier Jahre Erfahrung in der Automobilbranche in Vertrieb, Backoffice und Transport. Er hilft bei Registrierung, Rechnungen, Lieferfragen und Reklamationen." },
     focus: { en:"Customer onboarding · Delivery and claims", de:"Kundenregistrierung · Lieferung und Reklamationen" },
     languages:['en','pt','es'],
   },
   'cristian-zorila': {
-    bio: { en:"Cristian leads engineering. He builds and runs the dealer portal and connects it to the systems TRADEX. uses for vehicles, transport and documents.", de:"Cristian leitet die Entwicklung. Er entwickelt und betreibt das Händlerportal und verknüpft es mit den Systemen für Fahrzeuge, Transport und Dokumente." },
+    bio: { en:"Cristian leads engineering. He builds and runs the Dealer Portal and connects it to the systems TRADEX. uses for vehicles, transport and documents.", de:"Cristian leitet die Entwicklung. Er entwickelt und betreibt das Dealer Portal und verknüpft es mit den Systemen für Fahrzeuge, Transport und Dokumente." },
     focus: { en:"Engineering · Platform integration", de:"Entwicklung · Plattformintegration" },
     languages:['en','pt','ro'],
   },
   'lorela-picari': {
-    bio: { en:"Lorela leads the programme for the TRADEX. dealer portal, marketplace and internal tools. She also manages customer accounts.", de:"Lorela leitet das Programm für das Händlerportal, den Marktplatz und interne Anwendungen von TRADEX.. Sie betreut außerdem Kundenkonten." },
+    bio: { en:"Lorela leads the programme for the TRADEX. Dealer Portal, marketplace and internal tools. She also manages customer accounts.", de:"Lorela leitet das Programm für das Dealer Portal, den Marktplatz und interne Anwendungen von TRADEX.. Sie betreut außerdem Kundenkonten." },
     focus: { en:"Programme management · Account management", de:"Programmmanagement · Account Management" },
     languages:['en','pt','it','es','de','sq','tr'],
   },

@@ -5,8 +5,7 @@
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobileHero = matchMedia('(max-width: 720px)');
   const compactNav = matchMedia('(max-width: 1024px)');
-  const desktopScenes = matchMedia('(min-width: 921px)');
-  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  const fullScenes = matchMedia('(min-width: 921px) and (min-height: 700px)');
   const by = (selector, scope = document) => scope.querySelector(selector);
   const all = (selector, scope = document) => [...scope.querySelectorAll(selector)];
   const header = by('#header');
@@ -25,7 +24,6 @@
   const playingVideos = new WeakSet();
   const languageBar = by('.languages');
   const localeButtons = all('[data-lang]', languageBar);
-  const cursor = by('.cursor-light');
   const count = by('#compound-count');
   const scenes = new Map();
   const navigationType = performance.getEntriesByType('navigation')[0]?.type;
@@ -38,8 +36,6 @@
   let lang = 'en';
   let areaFormat = new Intl.NumberFormat('en-GB');
   let frame = 0;
-  let pointerFrame = 0;
-  let mouseX = 0, mouseY = 0, lightX = 0, lightY = 0;
   let videoPath = '';
   let activeProfile = null;
   let ignoreProfileFocus = false;
@@ -49,6 +45,18 @@
   let summaryShift = 0;
   let alignedHeadlineOffset = 0;
   let viewHeight = 0;
+  function updateHeroVideoLabel() {
+    const label = by('.hero-video-label', heroMedia);
+    if (!label) return;
+    const media = config.media.hero;
+    const cue = media.overlayLabelsEnabled && media.overlayCues?.find(c => heroVideo.currentTime >= c.start && heroVideo.currentTime < c.end);
+    const words = lang === 'de' ? media.overlayLabelTranslations : media.overlayLabels;
+    const text = cue && words?.[cue.label];
+    label.hidden = !text;
+    if (text && label.textContent !== text) label.textContent = text;
+  }
+  heroVideo.addEventListener('timeupdate', updateHeroVideoLabel);
+  heroVideo.addEventListener('seeked', updateHeroVideoLabel);
   function setMenu(open) {
     header.classList.toggle('menu-open', open);
     menu.setAttribute('aria-expanded', String(open));
@@ -106,7 +114,7 @@
     for (const location of all('[data-location]')) {
       const lines = config.locations[location.dataset.location];
       if (!lines?.length) continue;
-      const address = by('address', location);
+      const address = by('address', location) || location.appendChild(document.createElement('address'));
       address.replaceChildren();
       lines.forEach((line, index) => {
         if (index) address.append(document.createElement('br'));
@@ -178,7 +186,7 @@
       const needsDesktop = scene.sequence.length || scene.study.length
         || scene.future || scene.element.id === 'compound';
       const canPin = scene.stage && motion && (scene.element !== hero || viewHeight >= 580)
-        && (!needsDesktop || desktopScenes.matches);
+        && (!needsDesktop || fullScenes.matches);
       scene.element.classList.toggle('is-pinned', Boolean(canPin));
       scene.inset = 0;
       const height = scene.stage?.offsetHeight || 0;
@@ -211,6 +219,7 @@
     const headlineOffset = pinned
       ? summaryShift + (headlineTarget - summaryShift) * headlineProgress
       : 0;
+    heroStage.style.setProperty('--hero-art-reveal', String(smooth(ramp(departure,.2,.96))));
     heroStage.style.setProperty('--media-clip', `${(44 * departure).toFixed(2)}%`);
     heroStage.style.setProperty('--media-y', `${(-62 * departure).toFixed(2)}%`);
     heroStage.style.setProperty('--headline-y', `${headlineOffset.toFixed(2)}px`);
@@ -445,6 +454,13 @@
     sq:['Albanian','Albanisch'], tr:['Turkish','Türkisch'],
   };
 
+  function setCopyText(element, text) {
+    const parts = String(text ?? '').split(/(Dealer Portal)/g);
+    element.replaceChildren(...parts.filter(Boolean).map(part => {
+      if (part !== 'Dealer Portal') return document.createTextNode(part);
+      const strong = document.createElement('strong'); strong.className = 'product-name'; strong.textContent = part; return strong;
+    }));
+  }
   function localiseInline(element, de) {
     element.dataset.en = element.textContent;
     element.dataset.de = de || element.textContent;
@@ -454,7 +470,7 @@
     if (!field?.en && !field?.de) return;
     const p = document.createElement('p');
     p.className = className;
-    p.textContent = field.en || field.de;
+    setCopyText(p, field.en || field.de);
     localiseInline(p, field.de);
     panel.append(p);
   }
@@ -565,7 +581,7 @@
     root.lang = lang;
     areaFormat = new Intl.NumberFormat(lang === 'de' ? 'de-DE' : 'en-GB');
     count.textContent = areaFormat.format(lastArea);
-    document.title = lang === 'de' ? 'TRADEX. | Europäischer Fahrzeughandel' : 'TRADEX. | European car trading';
+    document.title = lang === 'de' ? 'TRADEX. | Europäischer B2B-Fahrzeughandel' : 'TRADEX. | European B2B vehicle trading';
     for (const [suffix, property] of [['', ''], ['-label', 'aria-label'], ['-alt', 'alt'], ['-href', 'href'], ['-content', 'content']]) {
       all(`[data-de${suffix}]`).forEach(element => {
         const original = property ? element.getAttribute(property) : element.textContent;
@@ -573,7 +589,7 @@
         if (!element.hasAttribute(key)) element.setAttribute(key, original);
         const next = element.getAttribute(`data-${lang}${suffix}`);
         if (property) element.setAttribute(property, next);
-        else element.textContent = next;
+        else setCopyText(element, next);
       });
     }
     all('[data-de-html]').forEach(element => {
@@ -581,23 +597,9 @@
       // The bilingual emphasis strings are authored in index.html.
       element.innerHTML = lang === 'de' ? element.dataset.deHtml : element.dataset.enHtml;
     });
+    updateHeroVideoLabel();
     for (const button of localeButtons) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
     measureMotion();
-  }
-
-  function moveLight() {
-    pointerFrame = 0;
-    lightX += (mouseX - lightX) * .2;
-    lightY += (mouseY - lightY) * .2;
-    cursor.style.setProperty('--pointer-x', `${lightX - 180}px`);
-    cursor.style.setProperty('--pointer-y', `${lightY - 180}px`);
-    if (Math.abs(mouseX - lightX) + Math.abs(mouseY - lightY) > 1) pointerFrame = requestAnimationFrame(moveLight);
-  }
-
-  function resetLight() {
-    cursor.classList.remove('is-active');
-    if (pointerFrame) cancelAnimationFrame(pointerFrame);
-    pointerFrame = 0;
   }
 
   function installEntrances() {
@@ -666,19 +668,6 @@
     if (!header.contains(event.target)) setMenu(false);
     if (activeProfile && !activeProfile.person.contains(event.target)) closeProfile();
   });
-  document.addEventListener('pointermove', event => {
-    if (event.pointerType !== 'mouse' || !finePointer.matches || reduceMotion.matches) return;
-    mouseX = event.clientX;
-    mouseY = event.clientY;
-    if (!cursor.classList.contains('is-active')) {
-      lightX = mouseX;
-      lightY = mouseY;
-      cursor.classList.add('is-active');
-    }
-    if (!pointerFrame) pointerFrame = requestAnimationFrame(moveLight);
-  }, { passive: true });
-  document.documentElement.addEventListener('pointerleave', resetLight);
-  finePointer.addEventListener('change', resetLight);
   compactNav.addEventListener('change', () => setMenu(false));
 
   for (const button of localeButtons) {
@@ -690,7 +679,6 @@
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) resetLight();
     schedule();
   });
   window.addEventListener('hashchange', () => {
@@ -706,7 +694,7 @@
   });
   window.addEventListener('scroll', schedule, { passive:true });
   window.addEventListener('resize', measureMotion, { passive:true });
-  reduceMotion.addEventListener('change', () => { resetLight(); measureMotion(); });
+  reduceMotion.addEventListener('change', () => { measureMotion(); });
   if (document.fonts) document.fonts.ready.then(() => {
     measureMotion();
   });

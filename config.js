@@ -30,6 +30,10 @@ window.TRADEX_CONFIG = {
     hero: {
       enabled: true,
       mp4: 'assets/video/tradex-hero.mp4',
+      overlayLabelsEnabled: false, // Enable only after timing the replacement footage.
+      overlayLabels: ["European vehicle supply", "Vehicle intelligence", "Commercial expertise", "Cross-border logistics", "Connected execution"],
+      overlayLabelTranslations: ["Europäische Fahrzeugbeschaffung", "Fahrzeugdaten und -analysen", "Handelsexpertise", "Grenzüberschreitende Logistik", "Vernetzte Abwicklung"],
+      overlayCues: [], // {start: 0, end: 2, label: 0}; configure after new hero footage.
     },
     compound: 'assets/video/tradex-compound.mp4',
   },
